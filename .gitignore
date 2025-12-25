@@ -65,3 +65,26 @@ secrets/
 # Google Services
 **/google-services.json
 **/GoogleService-Info.plist
+
+# ==========================================
+# 🔒 SECRETOS - MOTIVATION PRO
+# ==========================================
+
+# Keystore para firmar la app
+**/*.jks
+**/*.keystore
+**/upload-keystore.jks
+**/key.properties
+
+# API Keys privadas
+.env
+.env.*
+**/secrets.dart
+**/api_keys.dart
+
+# Carpeta de secretos
+secrets/
+
+# Google Services
+**/google-services.json
+**/GoogleService-Info.plist
