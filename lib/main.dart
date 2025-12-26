@@ -1,13 +1,15 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'core/theme/app_theme.dart';
+import 'data/database/database_helper.dart';
+import 'data/models/quote.dart';
+import 'data/models/user_profile.dart';
 
 // Fallback in case imports fail during analysis
 const appName = 'Motivation PRO';
 const appTagline = 'Tu inspiración diaria';
 
-void main() {
-  // Configurar orientación y barra de estado
+void main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
   SystemChrome.setPreferredOrientations([
@@ -22,7 +24,27 @@ void main() {
     ),
   );
 
+  // Inicializar base de datos en background (sin bloquear)
+  _initializeDatabase();
+
   runApp(const MyApp());
+}
+
+Future<void> _initializeDatabase() async {
+  final db = DatabaseHelper.instance;
+
+  // Probar insertar una frase de ejemplo
+  final testQuote = Quote(
+    text: 'El éxito es la suma de pequeños esfuerzos repetidos día tras día.',
+    author: 'Robert Collier',
+    category: 'Motivación',
+  );
+
+  await db.insertQuote(testQuote);
+
+  // Probar obtener todas las frases
+  final quotes = await db.getAllQuotes();
+  print('✅ Frases en DB: ${quotes.length}');
 }
 
 class MyApp extends StatelessWidget {
