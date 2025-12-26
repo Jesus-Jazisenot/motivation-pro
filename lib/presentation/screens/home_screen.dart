@@ -9,6 +9,8 @@ import '../../core/services/stats_service.dart';
 import '../widgets/xp_bar.dart';
 import '../widgets/level_up_dialog.dart';
 import '../../data/models/user_profile.dart';
+import '../../core/services/widget_service.dart';
+import 'package:flutter/services.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -70,7 +72,7 @@ class _HomeScreenState extends State<HomeScreen> {
       // Rastrear en estadísticas
       await StatsService.instance.trackQuoteView(quote);
 
-      // ⬅️ GUARDAR NIVEL ANTERIOR
+      // Guardar nivel anterior para detectar level up
       final oldLevel = _userProfile?.level ?? 1;
 
       // Agregar XP
@@ -79,7 +81,7 @@ class _HomeScreenState extends State<HomeScreen> {
       // Actualizar racha
       await StatsService.instance.updateUserStreak();
 
-      // ⬅️ RECARGAR PERFIL Y DETECTAR LEVEL UP
+      // Recargar perfil y detectar level up
       final newProfile = await db.getUserProfile();
       if (newProfile != null) {
         final newLevel = newProfile.level;
@@ -88,7 +90,7 @@ class _HomeScreenState extends State<HomeScreen> {
           _userProfile = newProfile;
         });
 
-        // ⬅️ MOSTRAR ANIMACIÓN SI SUBIÓ DE NIVEL
+        // Mostrar animación si subió de nivel
         if (newLevel > oldLevel && mounted) {
           showDialog(
             context: context,
@@ -98,6 +100,21 @@ class _HomeScreenState extends State<HomeScreen> {
               totalXp: newProfile.totalXp,
             ),
           );
+        }
+      }
+
+      // 🆕 ACTUALIZAR WIDGET
+      if (mounted) {
+        final quoteData = {
+          'text': quote.text,
+          'author': quote.author ?? 'Anónimo',
+        };
+
+        try {
+          await const MethodChannel('com.example.motivation_pro/widget')
+              .invokeMethod('updateWidget', quoteData);
+        } catch (e) {
+          print('Widget update error: $e');
         }
       }
     }

@@ -5,12 +5,16 @@ import 'presentation/screens/splash_screen.dart';
 import 'data/database/database_helper.dart';
 import 'data/database/initial_quotes.dart';
 import 'core/services/notification_service.dart';
+import 'core/services/widget_service.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
   // Inicializar servicio de notificaciones
   await NotificationService.instance.initialize();
+
+  // 🆕 Configurar canal para widget
+  WidgetService.setupMethodChannel();
 
   // Cargar frases iniciales en la base de datos
   await _loadInitialQuotes();
