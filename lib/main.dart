@@ -4,9 +4,13 @@ import 'core/theme/app_theme.dart';
 import 'presentation/screens/splash_screen.dart';
 import 'data/database/database_helper.dart';
 import 'data/database/initial_quotes.dart';
+import 'core/services/notification_service.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
+
+  // Inicializar servicio de notificaciones
+  await NotificationService.instance.initialize();
 
   // Cargar frases iniciales en la base de datos
   await _loadInitialQuotes();
