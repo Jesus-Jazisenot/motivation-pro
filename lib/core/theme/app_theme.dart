@@ -17,6 +17,7 @@ class AppTheme {
         primary: AppColors.primary,
         secondary: AppColors.secondary,
         surface: AppColors.surface,
+        surfaceContainer: AppColors.surface,
         error: AppColors.error,
         onPrimary: Colors.white,
         onSecondary: Colors.white,
@@ -43,16 +44,17 @@ class AppTheme {
       ),
       
       // Card
-      cardTheme: const CardThemeData(
+      cardTheme: CardThemeData(
         color: AppColors.surface,
         elevation: 0,
         shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.all(Radius.circular(16)),
-          side: BorderSide(
+          borderRadius: BorderRadius.circular(16),
+          side: const BorderSide(
             color: AppColors.border,
             width: 1,
           ),
         ),
+        margin: const EdgeInsets.all(0),
       ),
       
       // Elevated Button

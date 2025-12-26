@@ -33,7 +33,7 @@ class UserProfile {
       'name': name,
       'challenges': challenges.join(','),
       'preferred_times': preferredTimes.join(','),
-      'values': values.join(','),
+      'user_values': values.join(','),
       'tone_preference': tonePreference,
       'created_at': createdAt.toIso8601String(),
       'level': level,
@@ -56,7 +56,7 @@ class UserProfile {
           .split(',')
           .where((s) => s.isNotEmpty)
           .toList(),
-      values: (map['values'] as String)
+      values: (map['user_values'] as String)
           .split(',')
           .where((s) => s.isNotEmpty)
           .toList(),

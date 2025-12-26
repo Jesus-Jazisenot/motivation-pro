@@ -14,7 +14,7 @@ class DatabaseHelper {
   /// Obtener instancia de la base de datos
   Future<Database> get database async {
     if (_database != null) return _database!;
-    _database = await _initDB('motivation_pro.db');
+    _database = await _initDB('motivation_pro_v2.db');
     return _database!;
   }
 
@@ -25,8 +25,9 @@ class DatabaseHelper {
 
     return await openDatabase(
       path,
-      version: 1,
+      version: 2,
       onCreate: _createDB,
+      onUpgrade: _onUpgrade,
     );
   }
 
@@ -56,7 +57,7 @@ class DatabaseHelper {
         name TEXT NOT NULL,
         challenges TEXT,
         preferred_times TEXT,
-        values TEXT,
+        user_values TEXT,
         tone_preference TEXT DEFAULT 'balanced',
         created_at TEXT NOT NULL,
         level INTEGER DEFAULT 1,
@@ -78,7 +79,22 @@ class DatabaseHelper {
       )
     ''');
 
-    print('✅ Tablas creadas correctamente');
+    print('✅ Tablas creadas correctamente - Versión $version');
+  }
+
+  /// Actualizar base de datos
+  Future<void> _onUpgrade(Database db, int oldVersion, int newVersion) async {
+    print('🔄 Actualizando base de datos de v$oldVersion a v$newVersion');
+
+    if (oldVersion < 2) {
+      // Borrar tablas antiguas
+      await db.execute('DROP TABLE IF EXISTS user_profile');
+      await db.execute('DROP TABLE IF EXISTS quotes');
+      await db.execute('DROP TABLE IF EXISTS daily_stats');
+
+      // Recrear tablas
+      await _createDB(db, newVersion);
+    }
   }
 
   /// Cerrar base de datos
@@ -171,18 +187,33 @@ class DatabaseHelper {
 
   /// Insertar perfil de usuario
   Future<int> insertUserProfile(UserProfile profile) async {
-    final db = await database;
-    return await db.insert('user_profile', profile.toMap());
+    try {
+      final db = await database;
+      print('💾 Insertando perfil: ${profile.name}');
+      final id = await db.insert('user_profile', profile.toMap());
+      print('✅ Perfil insertado con ID: $id');
+      return id;
+    } catch (e) {
+      print('❌ Error insertando perfil: $e');
+      rethrow;
+    }
   }
 
   /// Obtener perfil de usuario
   Future<UserProfile?> getUserProfile() async {
-    final db = await database;
-    final result = await db.query('user_profile', limit: 1);
-    if (result.isNotEmpty) {
-      return UserProfile.fromMap(result.first);
+    try {
+      final db = await database;
+      final result = await db.query('user_profile', limit: 1);
+      if (result.isNotEmpty) {
+        print('✅ Perfil encontrado: ${result.first['name']}');
+        return UserProfile.fromMap(result.first);
+      }
+      print('ℹ️ No hay perfil guardado');
+      return null;
+    } catch (e) {
+      print('❌ Error obteniendo perfil: $e');
+      return null;
     }
-    return null;
   }
 
   /// Actualizar perfil de usuario
