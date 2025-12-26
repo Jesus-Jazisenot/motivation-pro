@@ -4,7 +4,7 @@ import '../../../core/constants/app_strings.dart';
 import '../../../core/constants/app_dimensions.dart';
 import '../../../data/database/database_helper.dart';
 import '../../../data/models/user_profile.dart';
-import '../home_screen.dart';
+import '../main_navigation.dart';
 
 class OnboardingScreen extends StatefulWidget {
   const OnboardingScreen({super.key});
@@ -76,9 +76,10 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
       print('🔵 Navegando a Home...');
 
       // Navegar a Home
+// Navegar a Main Navigation
       Navigator.of(context).pushReplacement(
         MaterialPageRoute(
-          builder: (_) => HomeScreen(),
+          builder: (_) => MainNavigation(),
         ),
       );
 

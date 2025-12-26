@@ -4,6 +4,7 @@ import '../../core/constants/app_strings.dart';
 import '../../data/database/database_helper.dart';
 import '../../data/models/quote.dart';
 import '../widgets/quote_card.dart';
+import 'settings_screen.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -115,7 +116,12 @@ class _HomeScreenState extends State<HomeScreen> {
                           ),
                           IconButton(
                             onPressed: () {
-                              // TODO: Ir a configuración
+                              Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                  builder: (_) => const SettingsScreen(),
+                                ),
+                              );
                             },
                             icon: const Icon(Icons.settings_outlined),
                             color: AppColors.textSecondary,

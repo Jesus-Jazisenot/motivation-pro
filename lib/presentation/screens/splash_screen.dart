@@ -4,7 +4,7 @@ import '../../core/constants/app_colors.dart';
 import '../../core/constants/app_strings.dart';
 import '../../data/database/database_helper.dart';
 import 'onboarding/onboarding_screen.dart';
-import 'home_screen.dart';
+import 'main_navigation.dart';
 
 class SplashScreen extends StatefulWidget {
   const SplashScreen({super.key});
@@ -70,10 +70,10 @@ class _SplashScreenState extends State<SplashScreen>
         ),
       );
     } else {
-      // Ya completó onboarding - Ir a Home
+      // Ya completó onboarding - Ir a Main Navigation
       Navigator.of(context).pushReplacement(
         MaterialPageRoute(
-          builder: (_) => const HomeScreen(),
+          builder: (_) => const MainNavigation(),
         ),
       );
     }
