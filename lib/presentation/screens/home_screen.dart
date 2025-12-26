@@ -5,6 +5,7 @@ import '../../data/database/database_helper.dart';
 import '../../data/models/quote.dart';
 import '../widgets/quote_card.dart';
 import 'settings_screen.dart';
+import '../../core/services/stats_service.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -60,6 +61,15 @@ class _HomeScreenState extends State<HomeScreen> {
         viewCount: quote.viewCount + 1,
       );
       await db.updateQuote(updatedQuote);
+
+      // 🆕 RASTREAR EN ESTADÍSTICAS
+      await StatsService.instance.trackQuoteView(quote);
+
+      // 🆕 AGREGAR XP
+      await StatsService.instance.addXP(10);
+
+      // 🆕 ACTUALIZAR RACHA
+      await StatsService.instance.updateUserStreak();
     }
   }
 

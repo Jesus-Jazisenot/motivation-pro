@@ -3,6 +3,7 @@ import '../../core/constants/app_colors.dart';
 import '../../core/constants/app_dimensions.dart';
 import '../../data/database/database_helper.dart';
 import '../../data/models/user_profile.dart';
+import '../../core/services/stats_service.dart'; // 🆕 IMPORT AGREGADO
 
 class StatsScreen extends StatefulWidget {
   const StatsScreen({super.key});
@@ -15,6 +16,8 @@ class _StatsScreenState extends State<StatsScreen> {
   bool _isLoading = true;
   int _totalQuotes = 0;
   int _favoriteQuotes = 0;
+  int _todayViewed = 0;
+  int _totalViewed = 0;
   UserProfile? _profile;
   Map<String, int> _categoryCounts = {};
 
@@ -24,32 +27,35 @@ class _StatsScreenState extends State<StatsScreen> {
     _loadStats();
   }
 
+  // 🆕 MÉTODO COMPLETAMENTE REEMPLAZADO
   Future<void> _loadStats() async {
     setState(() {
       _isLoading = true;
     });
 
     final db = DatabaseHelper.instance;
+    final statsService = StatsService.instance;
 
-    // Cargar perfil
+    // Cargar perfil (con racha actualizada)
+    await statsService.updateUserStreak();
     final profile = await db.getUserProfile();
 
     // Cargar todas las frases
     final allQuotes = await db.getAllQuotes();
     final favorites = await db.getFavoriteQuotes();
 
-    // Contar por categoría
-    final categoryCounts = <String, int>{};
-    for (final quote in allQuotes) {
-      categoryCounts[quote.category] =
-          (categoryCounts[quote.category] ?? 0) + 1;
-    }
+    // 🆕 ESTADÍSTICAS REALES
+    final todayViewed = await statsService.getQuotesViewedToday();
+    final totalViewed = await statsService.getTotalQuotesViewed();
+    final categoryStats = await statsService.getCategoryStats();
 
     setState(() {
       _profile = profile;
       _totalQuotes = allQuotes.length;
       _favoriteQuotes = favorites.length;
-      _categoryCounts = categoryCounts;
+      _todayViewed = todayViewed;
+      _totalViewed = totalViewed;
+      _categoryCounts = categoryStats;
       _isLoading = false;
     });
   }
@@ -120,18 +126,34 @@ class _StatsScreenState extends State<StatsScreen> {
 
                       const SizedBox(height: AppDimensions.paddingL),
 
-                      // Stats Grid
+                      // Stats Grid - FILA 1
                       Row(
                         children: [
                           Expanded(
                             child: _buildStatCard(
-                              icon: Icons.format_quote,
-                              title: 'Total Frases',
-                              value: _totalQuotes.toString(),
+                              icon: Icons.today,
+                              title: 'Vistas Hoy',
+                              value: _todayViewed.toString(),
                               color: AppColors.primary,
                             ),
                           ),
                           const SizedBox(width: AppDimensions.paddingM),
+                          Expanded(
+                            child: _buildStatCard(
+                              icon: Icons.visibility,
+                              title: 'Total Vistas',
+                              value: _totalViewed.toString(),
+                              color: AppColors.success,
+                            ),
+                          ),
+                        ],
+                      ),
+
+                      const SizedBox(height: AppDimensions.paddingM),
+
+                      // Stats Grid - FILA 2
+                      Row(
+                        children: [
                           Expanded(
                             child: _buildStatCard(
                               icon: Icons.favorite,
@@ -140,11 +162,21 @@ class _StatsScreenState extends State<StatsScreen> {
                               color: AppColors.favorite,
                             ),
                           ),
+                          const SizedBox(width: AppDimensions.paddingM),
+                          Expanded(
+                            child: _buildStatCard(
+                              icon: Icons.format_quote,
+                              title: 'Disponibles',
+                              value: _totalQuotes.toString(),
+                              color: AppColors.textSecondary,
+                            ),
+                          ),
                         ],
                       ),
 
                       const SizedBox(height: AppDimensions.paddingM),
 
+                      // Stats Grid - FILA 3 (Racha y Nivel)
                       Row(
                         children: [
                           Expanded(
@@ -169,24 +201,44 @@ class _StatsScreenState extends State<StatsScreen> {
 
                       const SizedBox(height: AppDimensions.paddingL),
 
-                      // Categorías
+                      // Categorías - 🆕 SECCIÓN ACTUALIZADA
                       Text(
-                        'Frases por Categoría',
+                        'Categorías Más Vistas',
                         style: Theme.of(context).textTheme.titleLarge,
                       ),
 
                       const SizedBox(height: AppDimensions.paddingM),
 
-                      ..._categoryCounts.entries.map((entry) {
-                        final percentage =
-                            (_categoryCounts[entry.key]! / _totalQuotes * 100)
-                                .toInt();
-                        return _buildCategoryBar(
-                          entry.key,
-                          entry.value,
-                          percentage,
-                        );
-                      }),
+                      if (_categoryCounts.isEmpty)
+                        Center(
+                          child: Padding(
+                            padding:
+                                const EdgeInsets.all(AppDimensions.paddingXL),
+                            child: Text(
+                              'Empieza a ver frases para generar estadísticas',
+                              textAlign: TextAlign.center,
+                              style: Theme.of(context)
+                                  .textTheme
+                                  .bodyMedium
+                                  ?.copyWith(
+                                    color: AppColors.textTertiary,
+                                  ),
+                            ),
+                          ),
+                        )
+                      else
+                        ..._categoryCounts.entries.map((entry) {
+                          final totalViews = _categoryCounts.values
+                              .fold<int>(0, (a, b) => a + b);
+                          final percentage = totalViews > 0
+                              ? ((entry.value / totalViews) * 100).toInt()
+                              : 0;
+                          return _buildCategoryBar(
+                            entry.key,
+                            entry.value,
+                            percentage,
+                          );
+                        }),
                     ],
                   ),
                 ),
@@ -216,7 +268,7 @@ class _StatsScreenState extends State<StatsScreen> {
           Container(
             width: 60,
             height: 60,
-            decoration: BoxDecoration(
+            decoration: const BoxDecoration(
               color: AppColors.primary,
               shape: BoxShape.circle,
             ),
@@ -249,7 +301,7 @@ class _StatsScreenState extends State<StatsScreen> {
               ],
             ),
           ),
-          Icon(
+          const Icon(
             Icons.arrow_forward_ios,
             color: AppColors.textTertiary,
             size: AppDimensions.iconS,
@@ -304,6 +356,28 @@ class _StatsScreenState extends State<StatsScreen> {
   }
 
   Widget _buildCategoryBar(String category, int count, int percentage) {
+    // Colores por categoría
+    Color getColorForCategory(String cat) {
+      switch (cat.toLowerCase()) {
+        case 'motivación':
+          return AppColors.primary;
+        case 'bienestar':
+          return AppColors.success;
+        case 'productividad':
+          return AppColors.warning;
+        case 'relaciones':
+          return AppColors.favorite;
+        case 'metas':
+          return const Color(0xFF00BCD4); // Cyan
+        case 'mentalidad':
+          return const Color(0xFF9C27B0); // Purple
+        default:
+          return AppColors.primary;
+      }
+    }
+
+    final color = getColorForCategory(category);
+
     return Padding(
       padding: const EdgeInsets.only(bottom: AppDimensions.paddingM),
       child: Column(
@@ -312,12 +386,27 @@ class _StatsScreenState extends State<StatsScreen> {
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Text(
-                category,
-                style: Theme.of(context).textTheme.bodyLarge,
+              Row(
+                children: [
+                  Container(
+                    width: 12,
+                    height: 12,
+                    decoration: BoxDecoration(
+                      color: color,
+                      shape: BoxShape.circle,
+                    ),
+                  ),
+                  const SizedBox(width: AppDimensions.paddingS),
+                  Text(
+                    category,
+                    style: Theme.of(context).textTheme.bodyLarge?.copyWith(
+                          fontWeight: FontWeight.w600,
+                        ),
+                  ),
+                ],
               ),
               Text(
-                '$count frases ($percentage%)',
+                '$count vistas',
                 style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                       color: AppColors.textSecondary,
                     ),
@@ -329,11 +418,9 @@ class _StatsScreenState extends State<StatsScreen> {
             borderRadius: BorderRadius.circular(AppDimensions.radiusFull),
             child: LinearProgressIndicator(
               value: percentage / 100,
-              minHeight: 8,
+              minHeight: 10,
               backgroundColor: AppColors.border,
-              valueColor: AlwaysStoppedAnimation<Color>(
-                AppColors.primary,
-              ),
+              valueColor: AlwaysStoppedAnimation<Color>(color),
             ),
           ),
         ],
