@@ -9,6 +9,10 @@ environment:
 dependencies:
   flutter:
     sdk: flutter
+      # UI
+  
+
+  confetti: ^0.7.0  # ⬅️ AGREGAR ESTA LÍNEA
 
   # UI y Material Design
   cupertino_icons: ^1.0.6
@@ -29,11 +33,14 @@ dependencies:
   dio: ^5.4.0
   
   # Notificaciones
-  flutter_local_notifications: ^17.0.0
-  timezone: ^0.9.2
+  # Notifications
+ # Notifications
+  flutter_local_notifications: ^17.2.3
+  timezone: ^0.9.4
+  permission_handler: ^11.3.1
   
   # Permisos
-  permission_handler: ^11.1.0
+  
   
   # Compartir
   share_plus: ^7.2.1

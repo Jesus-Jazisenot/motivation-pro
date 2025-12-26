@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../../core/constants/app_colors.dart';
 import '../../core/constants/app_dimensions.dart';
 import 'notification_settings_screen.dart';
+import 'achievements_screen.dart';
 
 class SettingsScreen extends StatelessWidget {
   const SettingsScreen({super.key});
@@ -58,6 +59,20 @@ class SettingsScreen extends StatelessWidget {
                           context,
                           MaterialPageRoute(
                             builder: (_) => const NotificationSettingsScreen(),
+                          ),
+                        );
+                      },
+                    ),
+                    _buildSettingTile(
+                      context,
+                      icon: Icons.emoji_events,
+                      title: 'Logros',
+                      subtitle: 'Ver tus badges desbloqueados',
+                      onTap: () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (_) => const AchievementsScreen(),
                           ),
                         );
                       },

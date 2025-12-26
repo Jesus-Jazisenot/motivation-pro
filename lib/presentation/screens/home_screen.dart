@@ -6,6 +6,9 @@ import '../../data/models/quote.dart';
 import '../widgets/quote_card.dart';
 import 'settings_screen.dart';
 import '../../core/services/stats_service.dart';
+import '../widgets/xp_bar.dart';
+import '../widgets/level_up_dialog.dart';
+import '../../data/models/user_profile.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -18,6 +21,7 @@ class _HomeScreenState extends State<HomeScreen> {
   String _userName = '';
   Quote? _currentQuote;
   bool _isLoading = true;
+  UserProfile? _userProfile;
 
   @override
   void initState() {
@@ -32,10 +36,11 @@ class _HomeScreenState extends State<HomeScreen> {
 
     final db = DatabaseHelper.instance;
 
-    // Cargar nombre de usuario
+    // Cargar nombre de usuario y perfil
     final profile = await db.getUserProfile();
     if (profile != null) {
       _userName = profile.name;
+      _userProfile = profile; // ⬅️ AGREGAR ESTA LÍNEA
     }
 
     // Cargar frase aleatoria
@@ -62,14 +67,39 @@ class _HomeScreenState extends State<HomeScreen> {
       );
       await db.updateQuote(updatedQuote);
 
-      // 🆕 RASTREAR EN ESTADÍSTICAS
+      // Rastrear en estadísticas
       await StatsService.instance.trackQuoteView(quote);
 
-      // 🆕 AGREGAR XP
+      // ⬅️ GUARDAR NIVEL ANTERIOR
+      final oldLevel = _userProfile?.level ?? 1;
+
+      // Agregar XP
       await StatsService.instance.addXP(10);
 
-      // 🆕 ACTUALIZAR RACHA
+      // Actualizar racha
       await StatsService.instance.updateUserStreak();
+
+      // ⬅️ RECARGAR PERFIL Y DETECTAR LEVEL UP
+      final newProfile = await db.getUserProfile();
+      if (newProfile != null) {
+        final newLevel = newProfile.level;
+
+        setState(() {
+          _userProfile = newProfile;
+        });
+
+        // ⬅️ MOSTRAR ANIMACIÓN SI SUBIÓ DE NIVEL
+        if (newLevel > oldLevel && mounted) {
+          showDialog(
+            context: context,
+            barrierDismissible: false,
+            builder: (_) => LevelUpDialog(
+              newLevel: newLevel,
+              totalXp: newProfile.totalXp,
+            ),
+          );
+        }
+      }
     }
   }
 
@@ -138,7 +168,17 @@ class _HomeScreenState extends State<HomeScreen> {
                           ),
                         ],
                       ),
-                    ),
+                    ), // ⬅️ AGREGAR ESTO:
+                    if (_userProfile != null)
+                      Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 24),
+                        child: XpBar(
+                          currentXp: _userProfile!.totalXp,
+                          level: _userProfile!.level,
+                        ),
+                      ),
+
+                    const SizedBox(height: 16),
 
                     // Quote Card
                     Expanded(
