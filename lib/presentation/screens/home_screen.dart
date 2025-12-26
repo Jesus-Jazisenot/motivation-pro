@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import '../../core/constants/app_colors.dart';
 import '../../core/constants/app_strings.dart';
 import '../../data/database/database_helper.dart';
+import '../../data/models/quote.dart';
+import '../widgets/quote_card.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -12,20 +14,51 @@ class HomeScreen extends StatefulWidget {
 
 class _HomeScreenState extends State<HomeScreen> {
   String _userName = '';
+  Quote? _currentQuote;
+  bool _isLoading = true;
 
   @override
   void initState() {
     super.initState();
-    _loadUserName();
+    _loadData();
   }
 
-  Future<void> _loadUserName() async {
+  Future<void> _loadData() async {
+    setState(() {
+      _isLoading = true;
+    });
+
     final db = DatabaseHelper.instance;
+
+    // Cargar nombre de usuario
     final profile = await db.getUserProfile();
     if (profile != null) {
+      _userName = profile.name;
+    }
+
+    // Cargar frase aleatoria
+    await _loadRandomQuote();
+
+    setState(() {
+      _isLoading = false;
+    });
+  }
+
+  Future<void> _loadRandomQuote() async {
+    final db = DatabaseHelper.instance;
+    final quote = await db.getRandomQuote();
+
+    if (quote != null) {
       setState(() {
-        _userName = profile.name;
+        _currentQuote = quote;
       });
+
+      // Actualizar última vez mostrada y contador
+      final updatedQuote = quote.copyWith(
+        lastShown: DateTime.now(),
+        viewCount: quote.viewCount + 1,
+      );
+      await db.updateQuote(updatedQuote);
     }
   }
 
@@ -45,37 +78,84 @@ class _HomeScreenState extends State<HomeScreen> {
           ),
         ),
         child: SafeArea(
-          child: Center(
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                const Icon(
-                  Icons.celebration,
-                  size: 80,
-                  color: AppColors.primary,
-                ),
-                const SizedBox(height: 24),
-                Text(
-                  '¡Hola, $_userName! 👋',
-                  style: Theme.of(context).textTheme.headlineLarge,
-                ),
-                const SizedBox(height: 16),
-                Text(
-                  'Bienvenido a ${AppStrings.appName}',
-                  style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                        color: AppColors.textSecondary,
+          child: _isLoading
+              ? const Center(
+                  child: CircularProgressIndicator(
+                    color: AppColors.primary,
+                  ),
+                )
+              : Column(
+                  children: [
+                    // Header
+                    Padding(
+                      padding: const EdgeInsets.all(24),
+                      child: Row(
+                        children: [
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  '¡Hola, $_userName! 👋',
+                                  style:
+                                      Theme.of(context).textTheme.headlineSmall,
+                                ),
+                                const SizedBox(height: 4),
+                                Text(
+                                  AppStrings.homeQuoteOfDay,
+                                  style: Theme.of(context)
+                                      .textTheme
+                                      .bodyMedium
+                                      ?.copyWith(
+                                        color: AppColors.textSecondary,
+                                      ),
+                                ),
+                              ],
+                            ),
+                          ),
+                          IconButton(
+                            onPressed: () {
+                              // TODO: Ir a configuración
+                            },
+                            icon: const Icon(Icons.settings_outlined),
+                            color: AppColors.textSecondary,
+                          ),
+                        ],
                       ),
-                ),
-                const SizedBox(height: 48),
-                Text(
-                  'Próximamente: Sistema de frases',
-                  style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                        color: AppColors.textTertiary,
+                    ),
+
+                    // Quote Card
+                    Expanded(
+                      child: Center(
+                        child: _currentQuote != null
+                            ? QuoteCard(
+                                quote: _currentQuote!,
+                                onNextQuote: _loadRandomQuote,
+                              )
+                            : Text(
+                                'No hay frases disponibles',
+                                style: Theme.of(context)
+                                    .textTheme
+                                    .bodyLarge
+                                    ?.copyWith(
+                                      color: AppColors.textSecondary,
+                                    ),
+                              ),
                       ),
+                    ),
+
+                    // Bottom info
+                    Padding(
+                      padding: const EdgeInsets.all(24),
+                      child: Text(
+                        'Desliza hacia abajo para actualizar',
+                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                              color: AppColors.textTertiary,
+                            ),
+                      ),
+                    ),
+                  ],
                 ),
-              ],
-            ),
-          ),
         ),
       ),
     );
