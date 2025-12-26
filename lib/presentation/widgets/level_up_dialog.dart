@@ -187,8 +187,15 @@ class _LevelUpDialogState extends State<LevelUpDialog>
                         const SizedBox(height: AppDimensions.paddingXL),
 
                         // Botón cerrar
+                        // Botón cerrar
                         ElevatedButton(
-                          onPressed: () => Navigator.of(context).pop(),
+                          onPressed: () {
+                            Navigator.of(context).pop();
+                            // Forzar actualización del estado padre
+                            WidgetsBinding.instance.addPostFrameCallback((_) {
+                              // El callback ya está manejado por el parent
+                            });
+                          },
                           style: ElevatedButton.styleFrom(
                             backgroundColor: Colors.white,
                             foregroundColor: AppColors.primary,

@@ -3,6 +3,8 @@ import 'package:path/path.dart';
 import '../models/quote.dart';
 import '../models/user_profile.dart';
 import '../models/daily_stats.dart';
+import '../../core/services/quote_api_service.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 /// Helper para gestionar la base de datos SQLite
 class DatabaseHelper {
@@ -167,18 +169,66 @@ class DatabaseHelper {
   }
 
   /// Obtener frase aleatoria no vista recientemente
+  /// Obtener frase aleatoria con algoritmo mejorado (NUNCA se acaba)
+  /// Obtener frase aleatoria - NUNCA retorna null
+  /// Obtener frase aleatoria - NUNCA retorna null
   Future<Quote?> getRandomQuote() async {
-    final db = await database;
-    final result = await db.rawQuery('''
+    try {
+      final db = await database;
+
+      // 1. Frases disponibles sin restricción de tiempo
+      var result = await db.rawQuery('''
       SELECT * FROM quotes 
-      WHERE last_shown IS NULL OR last_shown < datetime('now', '-1 day')
       ORDER BY RANDOM() 
       LIMIT 1
     ''');
-    if (result.isNotEmpty) {
-      return Quote.fromMap(result.first);
+
+      if (result.isNotEmpty) {
+        print('✅ Frase encontrada');
+        return Quote.fromMap(result.first);
+      }
+
+      // 2. Si NO hay frases, cargar las iniciales
+      print('⚠️ No hay frases en BD - Cargando iniciales');
+      await _loadInitialQuotes();
+
+      // 3. Intentar de nuevo
+      result = await db.rawQuery('''
+      SELECT * FROM quotes 
+      ORDER BY RANDOM() 
+      LIMIT 1
+    ''');
+
+      if (result.isNotEmpty) {
+        print('✅ Frase inicial cargada');
+        return Quote.fromMap(result.first);
+      }
+
+      // 4. Si TODO falla, crear frase de emergencia manual
+      print('🚨 Creando frase de emergencia');
+      final emergency = Quote(
+        text:
+            'El éxito es la suma de pequeños esfuerzos repetidos día tras día.',
+        author: 'Robert Collier',
+        category: 'Motivación',
+        lastShown: null,
+        viewCount: 0,
+      );
+
+      await insertQuote(emergency);
+      return emergency;
+    } catch (e) {
+      print('🚨 Error crítico en getRandomQuote: $e');
+
+      // Frase de emergencia sin guardar en BD
+      return Quote(
+        text: 'Ve a Settings → Fuente de Frases → Activar APIs',
+        author: 'Motivation PRO',
+        category: 'Motivación',
+        lastShown: null,
+        viewCount: 0,
+      );
     }
-    return null;
   }
 
   // ==========================================
@@ -275,5 +325,114 @@ class DatabaseHelper {
       'SELECT SUM(quotes_viewed) as total FROM daily_stats',
     );
     return result.first['total'] as int? ?? 0;
+  }
+
+  /// Obtener frase híbrida (API + Local) - NUNCA retorna null
+  /// Obtener frase híbrida - Simplificado
+  Future<Quote?> getHybridQuote() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final useApi = prefs.getBool('use_api') ?? true;
+
+      if (!useApi) {
+        print('⚙️ APIs desactivadas');
+        return await getRandomQuote();
+      }
+
+      // Intentar API con timeout corto
+      try {
+        final apiService = QuoteApiService.instance;
+        final apiQuote = await apiService
+            .getRandomQuote()
+            .timeout(const Duration(seconds: 5));
+
+        if (apiQuote != null) {
+          final quote = apiService.apiQuoteToQuote(apiQuote);
+          try {
+            await insertQuote(quote);
+          } catch (e) {
+            print('Duplicate quote, skipping: $e');
+          }
+          print('📡 API quote');
+          return quote;
+        }
+      } catch (e) {
+        print('API timeout/error: $e');
+      }
+
+      // Fallback a local
+      print('💾 Local quote');
+      return await getRandomQuote();
+    } catch (e) {
+      print('🚨 Error en hybrid: $e');
+      return await getRandomQuote();
+    }
+  }
+
+  /// Cargar frases iniciales si la BD está vacía
+  Future<void> _loadInitialQuotes() async {
+    final db = await database;
+
+    // Verificar si ya hay frases
+    final count = await db.rawQuery('SELECT COUNT(*) as count FROM quotes');
+    final total = count.first['count'] as int;
+
+    if (total > 0) {
+      print('ℹ️ Ya hay $total frases en BD');
+      return;
+    }
+
+    print('📝 Cargando frases iniciales...');
+
+    // Lista de frases de emergencia
+    final initialQuotes = [
+      Quote(
+        text:
+            'El éxito es la suma de pequeños esfuerzos repetidos día tras día.',
+        author: 'Robert Collier',
+        category: 'Motivación',
+        lastShown: null,
+        viewCount: 0,
+      ),
+      Quote(
+        text: 'No cuentes los días, haz que los días cuenten.',
+        author: 'Muhammad Ali',
+        category: 'Motivación',
+        lastShown: null,
+        viewCount: 0,
+      ),
+      Quote(
+        text: 'El único modo de hacer un gran trabajo es amar lo que haces.',
+        author: 'Steve Jobs',
+        category: 'Productividad',
+        lastShown: null,
+        viewCount: 0,
+      ),
+      Quote(
+        text: 'Cree que puedes y ya estarás a medio camino.',
+        author: 'Theodore Roosevelt',
+        category: 'Mentalidad',
+        lastShown: null,
+        viewCount: 0,
+      ),
+      Quote(
+        text: 'La vida es 10% lo que te pasa y 90% cómo reaccionas a ello.',
+        author: 'Charles R. Swindoll',
+        category: 'Bienestar',
+        lastShown: null,
+        viewCount: 0,
+      ),
+    ];
+
+    // Insertar frases
+    for (final quote in initialQuotes) {
+      try {
+        await insertQuote(quote);
+      } catch (e) {
+        print('Error insertando frase inicial: $e');
+      }
+    }
+
+    print('✅ ${initialQuotes.length} frases iniciales cargadas');
   }
 }

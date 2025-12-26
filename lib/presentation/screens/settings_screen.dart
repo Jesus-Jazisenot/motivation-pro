@@ -3,6 +3,7 @@ import '../../core/constants/app_colors.dart';
 import '../../core/constants/app_dimensions.dart';
 import 'notification_settings_screen.dart';
 import 'achievements_screen.dart';
+import 'api_settings_screen.dart';
 
 class SettingsScreen extends StatelessWidget {
   const SettingsScreen({super.key});
@@ -49,6 +50,7 @@ class SettingsScreen extends StatelessWidget {
                 child: ListView(
                   padding: const EdgeInsets.all(AppDimensions.paddingL),
                   children: [
+                    // NOTIFICACIONES
                     _buildSettingTile(
                       context,
                       icon: Icons.notifications_outlined,
@@ -63,6 +65,8 @@ class SettingsScreen extends StatelessWidget {
                         );
                       },
                     ),
+
+                    // LOGROS
                     _buildSettingTile(
                       context,
                       icon: Icons.emoji_events,
@@ -77,6 +81,24 @@ class SettingsScreen extends StatelessWidget {
                         );
                       },
                     ),
+
+                    // FUENTE DE FRASES (NUEVO)
+                    _buildSettingTile(
+                      context,
+                      icon: Icons.cloud_outlined,
+                      title: 'Fuente de Frases',
+                      subtitle: 'APIs externas y configuración',
+                      onTap: () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (_) => const ApiSettingsScreen(),
+                          ),
+                        );
+                      },
+                    ),
+
+                    // EDITAR PERFIL
                     _buildSettingTile(
                       context,
                       icon: Icons.person_outline,
@@ -91,6 +113,8 @@ class SettingsScreen extends StatelessWidget {
                         );
                       },
                     ),
+
+                    // BORRAR DATOS
                     _buildSettingTile(
                       context,
                       icon: Icons.delete_outline,
@@ -105,7 +129,9 @@ class SettingsScreen extends StatelessWidget {
                         );
                       },
                     ),
+
                     const SizedBox(height: AppDimensions.paddingL),
+
                     Center(
                       child: Text(
                         'Más opciones próximamente...',

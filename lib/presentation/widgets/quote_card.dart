@@ -94,7 +94,10 @@ class _QuoteCardState extends State<QuoteCard>
             opacity: _fadeAnimation.value,
             child: Container(
               margin: const EdgeInsets.all(AppDimensions.paddingL),
-              padding: const EdgeInsets.all(AppDimensions.paddingXL),
+              constraints: BoxConstraints(
+                maxHeight: MediaQuery.of(context).size.height *
+                    0.65, // ⬅️ LIMITAR ALTURA
+              ),
               decoration: BoxDecoration(
                 gradient: LinearGradient(
                   begin: Alignment.topLeft,
@@ -117,106 +120,122 @@ class _QuoteCardState extends State<QuoteCard>
                   ),
                 ],
               ),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  // Categoría
-                  Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: AppDimensions.paddingM,
-                      vertical: AppDimensions.paddingS,
-                    ),
-                    decoration: BoxDecoration(
-                      color: AppColors.primary.withOpacity(0.2),
-                      borderRadius: BorderRadius.circular(
-                        AppDimensions.radiusFull,
+              child: SingleChildScrollView(
+                // ⬅️ HACER SCROLLABLE
+                padding: const EdgeInsets.all(AppDimensions.paddingXL),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    // Categoría
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: AppDimensions.paddingM,
+                        vertical: AppDimensions.paddingS,
+                      ),
+                      decoration: BoxDecoration(
+                        color: AppColors.primary.withOpacity(0.2),
+                        borderRadius: BorderRadius.circular(
+                          AppDimensions.radiusFull,
+                        ),
+                      ),
+                      child: Text(
+                        widget.quote.category.toUpperCase(),
+                        style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                              color: AppColors.primary,
+                              fontWeight: FontWeight.bold,
+                              letterSpacing: 1.5,
+                            ),
                       ),
                     ),
-                    child: Text(
-                      widget.quote.category.toUpperCase(),
-                      style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                            color: AppColors.primary,
-                            fontWeight: FontWeight.bold,
-                            letterSpacing: 1.5,
-                          ),
-                    ),
-                  ),
 
-                  const SizedBox(height: AppDimensions.paddingXL),
-
-                  // Icono de comillas
-                  Icon(
-                    Icons.format_quote,
-                    size: AppDimensions.iconXL,
-                    color: AppColors.primary.withOpacity(0.3),
-                  ),
-
-                  const SizedBox(height: AppDimensions.paddingM),
-
-                  // Texto de la frase
-                  Text(
-                    widget.quote.text,
-                    textAlign: TextAlign.center,
-                    style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                          height: 1.5,
-                          fontWeight: FontWeight.w500,
-                        ),
-                  ),
-
-                  if (widget.quote.author != null) ...[
                     const SizedBox(height: AppDimensions.paddingL),
-                    Text(
-                      '- ${widget.quote.author}',
-                      textAlign: TextAlign.center,
-                      style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                            color: AppColors.textSecondary,
-                            fontStyle: FontStyle.italic,
-                          ),
+
+                    // Icono de comillas
+                    Icon(
+                      Icons.format_quote,
+                      size: 48, // ⬅️ TAMAÑO FIJO MÁS PEQUEÑO
+                      color: AppColors.primary.withOpacity(0.3),
                     ),
-                  ],
 
-                  const SizedBox(height: AppDimensions.paddingXL),
+                    const SizedBox(height: AppDimensions.paddingM),
 
-                  // Botones de acción
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                    children: [
-                      // Favorito
-                      IconButton(
-                        onPressed: _toggleFavorite,
-                        icon: Icon(
-                          _isFavorite ? Icons.favorite : Icons.favorite_border,
+                    // Texto de la frase
+                    Text(
+                      widget.quote.text,
+                      textAlign: TextAlign.center,
+                      style:
+                          Theme.of(context).textTheme.headlineSmall?.copyWith(
+                                height: 1.5,
+                                fontWeight: FontWeight.w500,
+                              ),
+                    ),
+
+                    if (widget.quote.author != null) ...[
+                      const SizedBox(height: AppDimensions.paddingL),
+                      Text(
+                        '- ${widget.quote.author}',
+                        textAlign: TextAlign.center,
+                        style: Theme.of(context).textTheme.bodyLarge?.copyWith(
+                              color: AppColors.textSecondary,
+                              fontStyle: FontStyle.italic,
+                            ),
+                      ),
+                    ],
+
+                    const SizedBox(height: AppDimensions.paddingL),
+
+                    // Botones de acción
+                    Wrap(
+                      // ⬅️ CAMBIAR Row POR Wrap PARA MEJOR RESPONSIVE
+                      alignment: WrapAlignment.center,
+                      spacing: 8,
+                      runSpacing: 8,
+                      children: [
+                        // Favorito
+                        IconButton(
+                          onPressed: _toggleFavorite,
+                          icon: Icon(
+                            _isFavorite
+                                ? Icons.favorite
+                                : Icons.favorite_border,
+                          ),
+                          color: _isFavorite
+                              ? AppColors.favorite
+                              : AppColors.textSecondary,
+                          iconSize: AppDimensions.iconL,
                         ),
-                        color: _isFavorite
-                            ? AppColors.favorite
-                            : AppColors.textSecondary,
-                        iconSize: AppDimensions.iconL,
-                      ),
 
-                      // Compartir
-                      IconButton(
-                        onPressed: _shareQuote,
-                        icon: const Icon(Icons.share),
-                        color: AppColors.textSecondary,
-                        iconSize: AppDimensions.iconL,
-                      ),
+                        // Compartir
+                        IconButton(
+                          onPressed: _shareQuote,
+                          icon: const Icon(Icons.share),
+                          color: AppColors.textSecondary,
+                          iconSize: AppDimensions.iconL,
+                        ),
 
-                      // Siguiente frase
-                      if (widget.onNextQuote != null)
-                        ElevatedButton.icon(
-                          onPressed: widget.onNextQuote,
-                          icon: const Icon(Icons.refresh),
-                          label: const Text('Nueva frase'),
-                          style: ElevatedButton.styleFrom(
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: AppDimensions.paddingL,
-                              vertical: AppDimensions.paddingM,
+                        // Siguiente frase
+                        if (widget.onNextQuote != null)
+                          ElevatedButton.icon(
+                            onPressed: widget.onNextQuote,
+                            icon: const Icon(Icons.refresh, size: 20),
+                            label: const Text('Nueva frase'),
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: AppColors.primary,
+                              foregroundColor: Colors.white,
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 24,
+                                vertical: 12,
+                              ),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(24),
+                              ),
+                              elevation: 4,
                             ),
                           ),
-                        ),
-                    ],
-                  ),
-                ],
+                      ],
+                    ),
+                  ],
+                ),
               ),
             ),
           ),
