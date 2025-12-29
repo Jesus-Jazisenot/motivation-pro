@@ -1,48 +1,38 @@
 import 'package:flutter/material.dart';
+import '../theme/theme_service.dart';
 
-/// Colores de la aplicación Motivation Pro
+/// Colores dinámicos que se actualizan según el tema actual
 class AppColors {
-  // Constructor privado para evitar instanciación
-  AppColors._();
+  // ⬅️ IMPORTANTE: Ahora lee del tema actual, no son valores fijos
 
-  // Colores principales - Tema Violeta
-  static const Color primary = Color(0xFF8B5CF6);
-  static const Color primaryDark = Color(0xFF7C3AED);
-  static const Color primaryLight = Color(0xFFA78BFA);
+  static Color get backgroundDark =>
+      ThemeService.instance.currentTheme.backgroundDark;
+  static Color get backgroundMid =>
+      ThemeService.instance.currentTheme.backgroundMid;
+  static Color get backgroundLight =>
+      ThemeService.instance.currentTheme.backgroundLight;
 
-  static const Color secondary = Color(0xFFA78BFA);
-  static const Color accent = Color(0xFFEC4899);
+  static Color get primary => ThemeService.instance.currentTheme.primary;
+  static Color get accent => ThemeService.instance.currentTheme.accent;
+  static Color get surface => ThemeService.instance.currentTheme.surface;
 
-  // Fondos
-  static const Color backgroundDark = Color(0xFF0F0C29);
-  static const Color backgroundMid = Color(0xFF302B63);
-  static const Color backgroundLight = Color(0xFF24243E);
+  static Color get textPrimary =>
+      ThemeService.instance.currentTheme.textPrimary;
+  static Color get textSecondary =>
+      ThemeService.instance.currentTheme.textSecondary;
+  static Color get textTertiary =>
+      ThemeService.instance.currentTheme.textTertiary;
 
-  // Superficies
-  static const Color surface = Color(0xFF1A1335);
-  static const Color surfaceLight = Color(0xFF2D2640);
+  static Color get success => ThemeService.instance.currentTheme.success;
+  static Color get warning => ThemeService.instance.currentTheme.warning;
+  static Color get error => ThemeService.instance.currentTheme.error;
+  static Color get info => ThemeService.instance.currentTheme.info;
 
-  // Textos
-  static const Color textPrimary = Color(0xFFFFFFFF);
-  static const Color textSecondary = Color(0xFFB3B3B3);
-  static const Color textTertiary = Color(0xFF808080);
+  static Color get cardBackground =>
+      ThemeService.instance.currentTheme.cardBackground;
+  static Color get border => ThemeService.instance.currentTheme.divider;
+  static Color get shadow => ThemeService.instance.currentTheme.shadow;
 
-  // Estados
-  static const Color success = Color(0xFF10B981);
-  static const Color warning = Color(0xFFF59E0B);
-  static const Color error = Color(0xFFEF4444);
-  static const Color info = Color(0xFF3B82F6);
-
-  // Específicos de features
-  static const Color favorite = Color(0xFFFF6B9D);
-  static const Color streak = Color(0xFFFF8C42);
-  static const Color badge = Color(0xFFFBBF24);
-
-  // Transparencias
-  static const Color overlay = Color(0x80000000);
-  static const Color overlayLight = Color(0x40000000);
-
-  // Bordes
-  static const Color border = Color(0x33FFFFFF);
-  static const Color borderLight = Color(0x1AFFFFFF);
+  // ⬅️ NUEVO: Color para favoritos (usa accent)
+  static Color get favorite => ThemeService.instance.currentTheme.accent;
 }

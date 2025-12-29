@@ -77,10 +77,10 @@ class StatsService {
       // Si es hoy o ayer
       if (statDate.isAtSameMomentAs(expectedDate) ||
           statDate.isAtSameMomentAs(
-              expectedDate.subtract(const Duration(days: 1)))) {
+              expectedDate.subtract(Duration(days: 1)))) {
         if (stat.quotesViewed > 0) {
           streak++;
-          checkDate = statDate.subtract(const Duration(days: 1));
+          checkDate = statDate.subtract(Duration(days: 1));
         } else {
           break;
         }

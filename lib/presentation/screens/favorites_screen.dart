@@ -47,9 +47,9 @@ class _FavoritesScreenState extends State<FavoritesScreen> {
 
     if (mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
+        SnackBar(
           content: Text('Removida de favoritas'),
-          duration: Duration(seconds: 2),
+          duration: const Duration(seconds: 2),
         ),
       );
     }
@@ -59,7 +59,7 @@ class _FavoritesScreenState extends State<FavoritesScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       body: Container(
-        decoration: const BoxDecoration(
+        decoration: BoxDecoration(
           gradient: LinearGradient(
             begin: Alignment.topLeft,
             end: Alignment.bottomRight,
@@ -75,15 +75,15 @@ class _FavoritesScreenState extends State<FavoritesScreen> {
             children: [
               // Header
               Padding(
-                padding: const EdgeInsets.all(AppDimensions.paddingL),
+                padding: EdgeInsets.all(AppDimensions.paddingL),
                 child: Row(
                   children: [
-                    const Icon(
+                    Icon(
                       Icons.favorite,
                       color: AppColors.favorite,
                       size: AppDimensions.iconL,
                     ),
-                    const SizedBox(width: AppDimensions.paddingM),
+                    SizedBox(width: AppDimensions.paddingM),
                     Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
@@ -107,7 +107,7 @@ class _FavoritesScreenState extends State<FavoritesScreen> {
               // Content
               Expanded(
                 child: _isLoading
-                    ? const Center(
+                    ? Center(
                         child: CircularProgressIndicator(
                           color: AppColors.primary,
                         ),
@@ -122,7 +122,7 @@ class _FavoritesScreenState extends State<FavoritesScreen> {
                                   size: 80,
                                   color: AppColors.textTertiary,
                                 ),
-                                const SizedBox(height: AppDimensions.paddingL),
+                                SizedBox(height: AppDimensions.paddingL),
                                 Text(
                                   'No tienes favoritas aún',
                                   style: Theme.of(context)
@@ -132,7 +132,7 @@ class _FavoritesScreenState extends State<FavoritesScreen> {
                                         color: AppColors.textSecondary,
                                       ),
                                 ),
-                                const SizedBox(height: AppDimensions.paddingM),
+                                SizedBox(height: AppDimensions.paddingM),
                                 Text(
                                   'Toca el ❤️ en cualquier frase\npara guardarla aquí',
                                   textAlign: TextAlign.center,
@@ -150,7 +150,7 @@ class _FavoritesScreenState extends State<FavoritesScreen> {
                             onRefresh: _loadFavorites,
                             color: AppColors.primary,
                             child: ListView.builder(
-                              padding: const EdgeInsets.only(
+                              padding: EdgeInsets.only(
                                 bottom: AppDimensions.paddingXL,
                               ),
                               itemCount: _favorites.length,
@@ -161,7 +161,7 @@ class _FavoritesScreenState extends State<FavoritesScreen> {
                                   direction: DismissDirection.endToStart,
                                   onDismissed: (_) => _removeFavorite(quote),
                                   background: Container(
-                                    margin: const EdgeInsets.symmetric(
+                                    margin: EdgeInsets.symmetric(
                                       horizontal: AppDimensions.paddingL,
                                       vertical: AppDimensions.paddingS,
                                     ),
@@ -172,10 +172,10 @@ class _FavoritesScreenState extends State<FavoritesScreen> {
                                       ),
                                     ),
                                     alignment: Alignment.centerRight,
-                                    padding: const EdgeInsets.only(
+                                    padding: EdgeInsets.only(
                                       right: AppDimensions.paddingL,
                                     ),
-                                    child: const Icon(
+                                    child: Icon(
                                       Icons.delete,
                                       color: Colors.white,
                                       size: AppDimensions.iconL,

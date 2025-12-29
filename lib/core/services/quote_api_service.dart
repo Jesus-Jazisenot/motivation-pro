@@ -2,17 +2,22 @@ import 'dart:convert';
 import 'package:http/http.dart' as http;
 import '../../data/models/api_quote.dart';
 import '../../data/models/quote.dart';
+import 'dart:io'; // ⬅️ AGREGAR LÍNEA
 
 class QuoteApiService {
   static final QuoteApiService instance = QuoteApiService._init();
 
-  QuoteApiService._init();
+  QuoteApiService._init() {
+    // SOLO DESARROLLO - Ignorar SSL
+    HttpOverrides.global = _DevelopmentHttpOverrides();
+  }
 
   // Quotable API
   static const _quotableBaseUrl = 'https://api.quotable.io';
 
   // ZenQuotes API
   static const _zenQuotesBaseUrl = 'https://zenquotes.io/api';
+  // SOLO DESARROLLO - Ignorar SSL
 
   /// Obtener frase aleatoria de Quotable
   Future<ApiQuote?> _getFromQuotable() async {
@@ -21,7 +26,7 @@ class QuoteApiService {
           .get(
             Uri.parse('$_quotableBaseUrl/random?maxLength=200'),
           )
-          .timeout(const Duration(seconds: 5));
+          .timeout(Duration(seconds: 5));
 
       if (response.statusCode == 200) {
         final json = jsonDecode(response.body) as Map<String, dynamic>;
@@ -40,7 +45,7 @@ class QuoteApiService {
           .get(
             Uri.parse('$_zenQuotesBaseUrl/random'),
           )
-          .timeout(const Duration(seconds: 5));
+          .timeout(Duration(seconds: 5));
 
       if (response.statusCode == 200) {
         final json = jsonDecode(response.body) as List<dynamic>;
@@ -54,28 +59,46 @@ class QuoteApiService {
     return null;
   }
 
-  /// Obtener frase de APIs (con fallback)
-  /// Obtener frase de APIs (con fallback mejorado)
+  /// Obtener frase de APIs con rotación inteligente
   Future<ApiQuote?> getRandomQuote() async {
-    // Intenta Type.fit primero (sin problemas SSL)
-    var quote = await _getFromTypefit();
-    if (quote != null) {
-      print('✅ Quote from Type.fit API');
-      return quote;
-    }
+    // Lista de APIs en orden de prioridad (más frases = más prioridad)
+    final apis = [
+      () => _getFromZenQuotes(), // Prioridad 1: 50,000+ frases ⭐
+      () => _getFromQuotable(), // Prioridad 2: 2,000+ frases
+      () => _getFromTypefit(), // Prioridad 3: 1,600 frases
+    ];
 
-    // Intenta ZenQuotes
-    quote = await _getFromZenQuotes();
-    if (quote != null) {
-      print('✅ Quote from ZenQuotes API');
-      return quote;
-    }
+    // Rotar APIs basado en el segundo actual para variedad
+    final now = DateTime.now();
+    final rotation = now.second % apis.length;
 
-    // Intenta Quotable (puede fallar en emulador)
-    quote = await _getFromQuotable();
-    if (quote != null) {
-      print('✅ Quote from Quotable API');
-      return quote;
+    // Intentar cada API en orden rotado
+    for (int i = 0; i < apis.length; i++) {
+      final index = (rotation + i) % apis.length;
+
+      try {
+        final quote = await apis[index]().timeout(
+          Duration(seconds: 5),
+        );
+
+        if (quote != null) {
+          final apiName = index == 0
+              ? 'ZenQuotes (50K+)'
+              : index == 1
+                  ? 'Quotable (2K)'
+                  : 'Type.fit (1.6K)';
+          print('✅ Quote from $apiName API');
+          return quote;
+        }
+      } catch (e) {
+        final apiName = index == 0
+            ? 'ZenQuotes'
+            : index == 1
+                ? 'Quotable'
+                : 'Type.fit';
+        print('⚠️ $apiName API falló: $e');
+        continue;
+      }
     }
 
     print('❌ All APIs failed');
@@ -89,7 +112,7 @@ class QuoteApiService {
           .get(
             Uri.parse('https://type.fit/api/quotes'),
           )
-          .timeout(const Duration(seconds: 5));
+          .timeout(Duration(seconds: 5));
 
       if (response.statusCode == 200) {
         final json = jsonDecode(response.body) as List<dynamic>;
@@ -132,7 +155,7 @@ class QuoteApiService {
       if (quote != null) {
         quotes.add(quote);
         // Pequeña pausa para no saturar la API
-        await Future.delayed(const Duration(milliseconds: 500));
+        await Future.delayed(Duration(milliseconds: 500));
       }
     }
 
@@ -146,7 +169,7 @@ class QuoteApiService {
           .get(
             Uri.parse('$_quotableBaseUrl/quotes?tags=$tag&limit=10'),
           )
-          .timeout(const Duration(seconds: 5));
+          .timeout(Duration(seconds: 5));
 
       if (response.statusCode == 200) {
         final json = jsonDecode(response.body) as Map<String, dynamic>;
@@ -169,7 +192,7 @@ class QuoteApiService {
       // Probar con Type.fit primero (más confiable)
       final response = await http
           .get(Uri.parse('https://type.fit/api/quotes'))
-          .timeout(const Duration(seconds: 5));
+          .timeout(Duration(seconds: 5));
 
       if (response.statusCode == 200) {
         print('✅ API connection verified');
@@ -183,7 +206,7 @@ class QuoteApiService {
     try {
       final response = await http
           .get(Uri.parse('$_zenQuotesBaseUrl/random'))
-          .timeout(const Duration(seconds: 5));
+          .timeout(Duration(seconds: 5));
 
       if (response.statusCode == 200) {
         print('✅ API connection verified (ZenQuotes)');
@@ -194,5 +217,17 @@ class QuoteApiService {
     }
 
     return false;
+  }
+}
+
+// SOLO DESARROLLO - Remover antes de producción
+class _DevelopmentHttpOverrides extends HttpOverrides {
+  @override
+  HttpClient createHttpClient(SecurityContext? context) {
+    return super.createHttpClient(context)
+      ..badCertificateCallback = (X509Certificate cert, String host, int port) {
+        print('⚠️ SSL bypass para desarrollo: $host');
+        return true;
+      };
   }
 }

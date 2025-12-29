@@ -3,6 +3,7 @@ import '../../core/constants/app_colors.dart';
 import '../../core/constants/app_dimensions.dart';
 import '../../core/services/quote_api_service.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'theme_selector_screen.dart'; // ⬅️ Import para temas
 
 class ApiSettingsScreen extends StatefulWidget {
   const ApiSettingsScreen({super.key});
@@ -15,6 +16,7 @@ class _ApiSettingsScreenState extends State<ApiSettingsScreen> {
   bool _useApi = true;
   bool _isCheckingConnection = false;
   bool? _isConnected;
+  String _languagePreference = 'both'; // 'es', 'en', 'both'
 
   @override
   void initState() {
@@ -27,12 +29,14 @@ class _ApiSettingsScreenState extends State<ApiSettingsScreen> {
     final prefs = await SharedPreferences.getInstance();
     setState(() {
       _useApi = prefs.getBool('use_api') ?? true;
+      _languagePreference = prefs.getString('language_preference') ?? 'both';
     });
   }
 
   Future<void> _saveSettings() async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.setBool('use_api', _useApi);
+    await prefs.setString('language_preference', _languagePreference);
   }
 
   Future<void> _checkConnection() async {
@@ -48,11 +52,91 @@ class _ApiSettingsScreenState extends State<ApiSettingsScreen> {
     });
   }
 
+  Widget _buildLanguageOption(String value, String title, String subtitle) {
+    final isSelected = _languagePreference == value;
+
+    return GestureDetector(
+      onTap: () async {
+        setState(() {
+          _languagePreference = value;
+        });
+        await _saveSettings();
+
+        if (mounted) {
+          String message = '';
+          if (value == 'both') {
+            message = '🌐 Verás frases en español e inglés';
+          } else if (value == 'es') {
+            message =
+                '🇪🇸 Solo verás frases en español (traducidas automáticamente)';
+          } else if (value == 'en') {
+            message = '🇬🇧 Solo verás frases en inglés';
+          }
+
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(message),
+              duration: Duration(seconds: 2),
+            ),
+          );
+        }
+      },
+      child: Container(
+        margin: EdgeInsets.only(bottom: AppDimensions.paddingS),
+        padding: EdgeInsets.all(AppDimensions.paddingM),
+        decoration: BoxDecoration(
+          color: isSelected
+              ? AppColors.primary.withOpacity(0.1)
+              : Colors.transparent,
+          borderRadius: BorderRadius.circular(AppDimensions.radiusM),
+          border: Border.all(
+            color: isSelected ? AppColors.primary : AppColors.border,
+            width: 2,
+          ),
+        ),
+        child: Row(
+          children: [
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    title,
+                    style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                          color: isSelected
+                              ? AppColors.primary
+                              : AppColors.textPrimary,
+                          fontWeight:
+                              isSelected ? FontWeight.bold : FontWeight.normal,
+                        ),
+                  ),
+                  SizedBox(height: 4),
+                  Text(
+                    subtitle,
+                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                          color: AppColors.textSecondary,
+                        ),
+                  ),
+                ],
+              ),
+            ),
+            if (isSelected)
+              Icon(
+                Icons.check_circle,
+                color: AppColors.primary,
+                size: AppDimensions.iconL,
+              ),
+          ],
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       body: Container(
-        decoration: const BoxDecoration(
+        decoration: BoxDecoration(
           gradient: LinearGradient(
             begin: Alignment.topLeft,
             end: Alignment.bottomRight,
@@ -68,24 +152,24 @@ class _ApiSettingsScreenState extends State<ApiSettingsScreen> {
             children: [
               // Header
               Padding(
-                padding: const EdgeInsets.all(AppDimensions.paddingL),
+                padding: EdgeInsets.all(AppDimensions.paddingL),
                 child: Row(
                   children: [
                     IconButton(
                       onPressed: () => Navigator.pop(context),
-                      icon: const Icon(Icons.arrow_back),
+                      icon: Icon(Icons.arrow_back),
                       color: AppColors.textPrimary,
                     ),
-                    const SizedBox(width: AppDimensions.paddingM),
+                    SizedBox(width: AppDimensions.paddingM),
                     Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
-                          'Fuente de Frases',
+                          'Configuración',
                           style: Theme.of(context).textTheme.headlineMedium,
                         ),
                         Text(
-                          'Configurar APIs externas',
+                          'Personaliza tu experiencia',
                           style:
                               Theme.of(context).textTheme.bodyMedium?.copyWith(
                                     color: AppColors.textSecondary,
@@ -100,11 +184,88 @@ class _ApiSettingsScreenState extends State<ApiSettingsScreen> {
               // Content
               Expanded(
                 child: ListView(
-                  padding: const EdgeInsets.all(AppDimensions.paddingL),
+                  padding: EdgeInsets.all(AppDimensions.paddingL),
                   children: [
+                    // ⬅️ NUEVO: Sección de Personalización
+                    Text(
+                      'PERSONALIZACIÓN',
+                      style: Theme.of(context).textTheme.labelLarge?.copyWith(
+                            color: AppColors.textTertiary,
+                            letterSpacing: 1.2,
+                          ),
+                    ),
+
+                    SizedBox(height: AppDimensions.paddingM),
+
+                    // ⬅️ NUEVO: Opción de Temas
+                    Container(
+                      decoration: BoxDecoration(
+                        color: AppColors.surface,
+                        borderRadius: BorderRadius.circular(
+                          AppDimensions.radiusM,
+                        ),
+                        border: Border.all(
+                          color: AppColors.border,
+                          width: 1,
+                        ),
+                      ),
+                      child: ListTile(
+                        contentPadding:
+                            EdgeInsets.all(AppDimensions.paddingM),
+                        leading: Container(
+                          padding: EdgeInsets.all(8),
+                          decoration: BoxDecoration(
+                            color: AppColors.primary.withOpacity(0.1),
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          child: Icon(
+                            Icons.palette_outlined,
+                            color: AppColors.primary,
+                            size: AppDimensions.iconL,
+                          ),
+                        ),
+                        title: Text(
+                          'Temas',
+                          style: Theme.of(context).textTheme.titleMedium,
+                        ),
+                        subtitle: Text(
+                          'Personaliza los colores de la app',
+                          style:
+                              Theme.of(context).textTheme.bodySmall?.copyWith(
+                                    color: AppColors.textSecondary,
+                                  ),
+                        ),
+                        trailing: Icon(
+                          Icons.chevron_right,
+                          color: AppColors.textTertiary,
+                        ),
+                        onTap: () {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (_) => const ThemeSelectorScreen(),
+                            ),
+                          );
+                        },
+                      ),
+                    ),
+
+                    SizedBox(height: AppDimensions.paddingXL),
+
+                    // Sección de Fuente de Frases
+                    Text(
+                      'FUENTE DE FRASES',
+                      style: Theme.of(context).textTheme.labelLarge?.copyWith(
+                            color: AppColors.textTertiary,
+                            letterSpacing: 1.2,
+                          ),
+                    ),
+
+                    SizedBox(height: AppDimensions.paddingM),
+
                     // Toggle API
                     Container(
-                      padding: const EdgeInsets.all(AppDimensions.paddingL),
+                      padding: EdgeInsets.all(AppDimensions.paddingL),
                       decoration: BoxDecoration(
                         color: AppColors.surface,
                         borderRadius: BorderRadius.circular(
@@ -122,7 +283,7 @@ class _ApiSettingsScreenState extends State<ApiSettingsScreen> {
                             color: AppColors.primary,
                             size: AppDimensions.iconL,
                           ),
-                          const SizedBox(width: AppDimensions.paddingM),
+                          SizedBox(width: AppDimensions.paddingM),
                           Expanded(
                             child: Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
@@ -132,7 +293,7 @@ class _ApiSettingsScreenState extends State<ApiSettingsScreen> {
                                   style:
                                       Theme.of(context).textTheme.titleMedium,
                                 ),
-                                const SizedBox(height: 4),
+                                SizedBox(height: 4),
                                 Text(
                                   'Accede a 50,000+ frases de internet',
                                   style: Theme.of(context)
@@ -161,11 +322,10 @@ class _ApiSettingsScreenState extends State<ApiSettingsScreen> {
                                           ? '✅ APIs activadas - Reinicia la app o cambia de frase'
                                           : '💾 Usando solo frases locales',
                                     ),
-                                    duration: const Duration(seconds: 3),
+                                    duration: Duration(seconds: 3),
                                   ),
                                 );
 
-                                // Verificar conexión después de activar
                                 if (value) {
                                   _checkConnection();
                                 }
@@ -177,11 +337,87 @@ class _ApiSettingsScreenState extends State<ApiSettingsScreen> {
                       ),
                     ),
 
-                    const SizedBox(height: AppDimensions.paddingL),
+                    SizedBox(height: AppDimensions.paddingL),
+
+                    // Selector de Idioma
+                    Container(
+                      padding: EdgeInsets.all(AppDimensions.paddingL),
+                      decoration: BoxDecoration(
+                        color: AppColors.surface,
+                        borderRadius: BorderRadius.circular(
+                          AppDimensions.radiusM,
+                        ),
+                        border: Border.all(
+                          color: AppColors.border,
+                          width: 1,
+                        ),
+                      ),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Row(
+                            children: [
+                              Icon(
+                                Icons.language,
+                                color: AppColors.primary,
+                                size: AppDimensions.iconL,
+                              ),
+                              SizedBox(width: AppDimensions.paddingM),
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(
+                                      'Idioma de Frases',
+                                      style: Theme.of(context)
+                                          .textTheme
+                                          .titleMedium,
+                                    ),
+                                    SizedBox(height: 4),
+                                    Text(
+                                      'Elige qué idioma prefieres',
+                                      style: Theme.of(context)
+                                          .textTheme
+                                          .bodySmall
+                                          ?.copyWith(
+                                            color: AppColors.textSecondary,
+                                          ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ],
+                          ),
+
+                          SizedBox(height: AppDimensions.paddingM),
+
+                          // Opciones de idioma
+                          _buildLanguageOption(
+                            'both',
+                            '🌐 Ambos idiomas',
+                            'Español e Inglés mezclados',
+                          ),
+
+                          _buildLanguageOption(
+                            'es',
+                            '🇪🇸 Solo Español',
+                            'Frases traducidas automáticamente',
+                          ),
+
+                          _buildLanguageOption(
+                            'en',
+                            '🇬🇧 Solo Inglés',
+                            'Frases en inglés (requiere APIs)',
+                          ),
+                        ],
+                      ),
+                    ),
+
+                    SizedBox(height: AppDimensions.paddingL),
 
                     // Estado de conexión
                     Container(
-                      padding: const EdgeInsets.all(AppDimensions.paddingL),
+                      padding: EdgeInsets.all(AppDimensions.paddingL),
                       decoration: BoxDecoration(
                         color: _isConnected == true
                             ? AppColors.success.withOpacity(0.1)
@@ -203,7 +439,7 @@ class _ApiSettingsScreenState extends State<ApiSettingsScreen> {
                       child: Row(
                         children: [
                           if (_isCheckingConnection)
-                            const SizedBox(
+                            SizedBox(
                               width: AppDimensions.iconL,
                               height: AppDimensions.iconL,
                               child: CircularProgressIndicator(
@@ -225,7 +461,7 @@ class _ApiSettingsScreenState extends State<ApiSettingsScreen> {
                                       : AppColors.textTertiary,
                               size: AppDimensions.iconL,
                             ),
-                          const SizedBox(width: AppDimensions.paddingM),
+                          SizedBox(width: AppDimensions.paddingM),
                           Expanded(
                             child: Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
@@ -239,7 +475,7 @@ class _ApiSettingsScreenState extends State<ApiSettingsScreen> {
                                   style:
                                       Theme.of(context).textTheme.titleMedium,
                                 ),
-                                const SizedBox(height: 4),
+                                SizedBox(height: 4),
                                 Text(
                                   _isConnected == true
                                       ? 'APIs funcionando correctamente'
@@ -258,18 +494,18 @@ class _ApiSettingsScreenState extends State<ApiSettingsScreen> {
                           ),
                           IconButton(
                             onPressed: _checkConnection,
-                            icon: const Icon(Icons.refresh),
+                            icon: Icon(Icons.refresh),
                             color: AppColors.primary,
                           ),
                         ],
                       ),
                     ),
 
-                    const SizedBox(height: AppDimensions.paddingL),
+                    SizedBox(height: AppDimensions.paddingL),
 
                     // Info
                     Container(
-                      padding: const EdgeInsets.all(AppDimensions.paddingM),
+                      padding: EdgeInsets.all(AppDimensions.paddingM),
                       decoration: BoxDecoration(
                         color: AppColors.primary.withOpacity(0.1),
                         borderRadius: BorderRadius.circular(
@@ -284,11 +520,11 @@ class _ApiSettingsScreenState extends State<ApiSettingsScreen> {
                             color: AppColors.primary,
                             size: AppDimensions.iconM,
                           ),
-                          const SizedBox(width: AppDimensions.paddingM),
+                          SizedBox(width: AppDimensions.paddingM),
                           Expanded(
                             child: Text(
-                              'Con APIs activadas, tendrás acceso a miles de frases nuevas. '
-                              'Si no hay internet, la app usará automáticamente las frases locales.',
+                              'Con APIs activadas y filtro de español, las frases se traducen automáticamente. '
+                              'Sin internet, se usan las frases locales.',
                               style: Theme.of(context)
                                   .textTheme
                                   .bodySmall
@@ -301,7 +537,7 @@ class _ApiSettingsScreenState extends State<ApiSettingsScreen> {
                       ),
                     ),
 
-                    const SizedBox(height: AppDimensions.paddingL),
+                    SizedBox(height: AppDimensions.paddingL),
 
                     // APIs usadas
                     Text(
@@ -309,7 +545,7 @@ class _ApiSettingsScreenState extends State<ApiSettingsScreen> {
                       style: Theme.of(context).textTheme.titleLarge,
                     ),
 
-                    const SizedBox(height: AppDimensions.paddingM),
+                    SizedBox(height: AppDimensions.paddingM),
 
                     _buildApiCard(
                       title: 'Type.fit',
@@ -321,6 +557,12 @@ class _ApiSettingsScreenState extends State<ApiSettingsScreen> {
                       title: 'ZenQuotes',
                       description: '50,000+ frases en inglés',
                       icon: Icons.self_improvement,
+                    ),
+
+                    _buildApiCard(
+                      title: 'Google Translate',
+                      description: 'Traducción automática de frases',
+                      icon: Icons.translate,
                     ),
                   ],
                 ),
@@ -338,8 +580,8 @@ class _ApiSettingsScreenState extends State<ApiSettingsScreen> {
     required IconData icon,
   }) {
     return Container(
-      margin: const EdgeInsets.only(bottom: AppDimensions.paddingM),
-      padding: const EdgeInsets.all(AppDimensions.paddingM),
+      margin: EdgeInsets.only(bottom: AppDimensions.paddingM),
+      padding: EdgeInsets.all(AppDimensions.paddingM),
       decoration: BoxDecoration(
         color: AppColors.surface,
         borderRadius: BorderRadius.circular(AppDimensions.radiusM),
@@ -355,7 +597,7 @@ class _ApiSettingsScreenState extends State<ApiSettingsScreen> {
             color: AppColors.primary,
             size: AppDimensions.iconL,
           ),
-          const SizedBox(width: AppDimensions.paddingM),
+          SizedBox(width: AppDimensions.paddingM),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,

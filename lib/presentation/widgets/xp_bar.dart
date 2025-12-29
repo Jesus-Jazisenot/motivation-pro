@@ -21,7 +21,7 @@ class XpBar extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.all(AppDimensions.paddingM),
+      padding: EdgeInsets.all(AppDimensions.paddingM),
       decoration: BoxDecoration(
         color: AppColors.surface,
         borderRadius: BorderRadius.circular(AppDimensions.radiusM),
@@ -40,12 +40,12 @@ class XpBar extends StatelessWidget {
               Row(
                 children: [
                   Container(
-                    padding: const EdgeInsets.symmetric(
+                    padding: EdgeInsets.symmetric(
                       horizontal: AppDimensions.paddingM,
                       vertical: AppDimensions.paddingS,
                     ),
                     decoration: BoxDecoration(
-                      gradient: const LinearGradient(
+                      gradient: LinearGradient(
                         colors: [
                           AppColors.primary,
                           AppColors.success,
@@ -57,12 +57,12 @@ class XpBar extends StatelessWidget {
                     ),
                     child: Row(
                       children: [
-                        const Icon(
+                        Icon(
                           Icons.military_tech,
                           color: Colors.white,
                           size: 16,
                         ),
-                        const SizedBox(width: 4),
+                        SizedBox(width: 4),
                         Text(
                           'Nivel $level',
                           style:
@@ -86,7 +86,7 @@ class XpBar extends StatelessWidget {
             ],
           ),
 
-          const SizedBox(height: AppDimensions.paddingS),
+          SizedBox(height: AppDimensions.paddingS),
 
           // Barra de progreso
           ClipRRect(
@@ -110,7 +110,7 @@ class XpBar extends StatelessWidget {
                   child: Container(
                     height: 12,
                     decoration: BoxDecoration(
-                      gradient: const LinearGradient(
+                      gradient: LinearGradient(
                         colors: [
                           AppColors.primary,
                           AppColors.success,
@@ -132,7 +132,7 @@ class XpBar extends StatelessWidget {
             ),
           ),
 
-          const SizedBox(height: 4),
+          SizedBox(height: 4),
 
           // Texto de progreso
           Text(

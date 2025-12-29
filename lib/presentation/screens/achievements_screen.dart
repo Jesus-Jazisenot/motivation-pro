@@ -53,7 +53,7 @@ class _AchievementsScreenState extends State<AchievementsScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       body: Container(
-        decoration: const BoxDecoration(
+        decoration: BoxDecoration(
           gradient: LinearGradient(
             begin: Alignment.topLeft,
             end: Alignment.bottomRight,
@@ -69,15 +69,15 @@ class _AchievementsScreenState extends State<AchievementsScreen> {
             children: [
               // Header
               Padding(
-                padding: const EdgeInsets.all(AppDimensions.paddingL),
+                padding: EdgeInsets.all(AppDimensions.paddingL),
                 child: Row(
                   children: [
                     IconButton(
                       onPressed: () => Navigator.pop(context),
-                      icon: const Icon(Icons.arrow_back),
+                      icon: Icon(Icons.arrow_back),
                       color: AppColors.textPrimary,
                     ),
-                    const SizedBox(width: AppDimensions.paddingM),
+                    SizedBox(width: AppDimensions.paddingM),
                     Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
@@ -101,13 +101,13 @@ class _AchievementsScreenState extends State<AchievementsScreen> {
               // Content
               Expanded(
                 child: _isLoading
-                    ? const Center(
+                    ? Center(
                         child: CircularProgressIndicator(
                           color: AppColors.primary,
                         ),
                       )
                     : ListView.builder(
-                        padding: const EdgeInsets.all(AppDimensions.paddingL),
+                        padding: EdgeInsets.all(AppDimensions.paddingL),
                         itemCount: Achievements.all.length,
                         itemBuilder: (context, index) {
                           final achievement = Achievements.all[index];
@@ -130,8 +130,8 @@ class _AchievementsScreenState extends State<AchievementsScreen> {
 
   Widget _buildAchievementCard(Achievement achievement, bool isUnlocked) {
     return Container(
-      margin: const EdgeInsets.only(bottom: AppDimensions.paddingM),
-      padding: const EdgeInsets.all(AppDimensions.paddingL),
+      margin: EdgeInsets.only(bottom: AppDimensions.paddingM),
+      padding: EdgeInsets.all(AppDimensions.paddingL),
       decoration: BoxDecoration(
         gradient: isUnlocked
             ? LinearGradient(
@@ -173,7 +173,7 @@ class _AchievementsScreenState extends State<AchievementsScreen> {
             ),
           ),
 
-          const SizedBox(width: AppDimensions.paddingM),
+          SizedBox(width: AppDimensions.paddingM),
 
           // Info
           Expanded(
@@ -189,7 +189,7 @@ class _AchievementsScreenState extends State<AchievementsScreen> {
                         fontWeight: FontWeight.bold,
                       ),
                 ),
-                const SizedBox(height: 4),
+                SizedBox(height: 4),
                 Text(
                   achievement.description,
                   style: Theme.of(context).textTheme.bodySmall?.copyWith(
@@ -204,7 +204,7 @@ class _AchievementsScreenState extends State<AchievementsScreen> {
 
           // Estado
           if (isUnlocked)
-            const Icon(
+            Icon(
               Icons.check_circle,
               color: AppColors.success,
               size: AppDimensions.iconL,

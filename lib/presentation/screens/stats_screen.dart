@@ -3,7 +3,7 @@ import '../../core/constants/app_colors.dart';
 import '../../core/constants/app_dimensions.dart';
 import '../../data/database/database_helper.dart';
 import '../../data/models/user_profile.dart';
-import '../../core/services/stats_service.dart'; // 🆕 IMPORT AGREGADO
+import '../../core/services/stats_service.dart';
 
 class StatsScreen extends StatefulWidget {
   const StatsScreen({super.key});
@@ -27,7 +27,6 @@ class _StatsScreenState extends State<StatsScreen> {
     _loadStats();
   }
 
-  // 🆕 MÉTODO COMPLETAMENTE REEMPLAZADO
   Future<void> _loadStats() async {
     setState(() {
       _isLoading = true;
@@ -36,15 +35,12 @@ class _StatsScreenState extends State<StatsScreen> {
     final db = DatabaseHelper.instance;
     final statsService = StatsService.instance;
 
-    // Cargar perfil (con racha actualizada)
     await statsService.updateUserStreak();
     final profile = await db.getUserProfile();
 
-    // Cargar todas las frases
     final allQuotes = await db.getAllQuotes();
     final favorites = await db.getFavoriteQuotes();
 
-    // 🆕 ESTADÍSTICAS REALES
     final todayViewed = await statsService.getQuotesViewedToday();
     final totalViewed = await statsService.getTotalQuotesViewed();
     final categoryStats = await statsService.getCategoryStats();
@@ -64,7 +60,7 @@ class _StatsScreenState extends State<StatsScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       body: Container(
-        decoration: const BoxDecoration(
+        decoration: BoxDecoration(
           gradient: LinearGradient(
             begin: Alignment.topLeft,
             end: Alignment.bottomRight,
@@ -77,7 +73,7 @@ class _StatsScreenState extends State<StatsScreen> {
         ),
         child: SafeArea(
           child: _isLoading
-              ? const Center(
+              ? Center(
                   child: CircularProgressIndicator(
                     color: AppColors.primary,
                   ),
@@ -86,17 +82,17 @@ class _StatsScreenState extends State<StatsScreen> {
                   onRefresh: _loadStats,
                   color: AppColors.primary,
                   child: ListView(
-                    padding: const EdgeInsets.all(AppDimensions.paddingL),
+                    padding: EdgeInsets.all(AppDimensions.paddingL),
                     children: [
                       // Header
                       Row(
                         children: [
-                          const Icon(
+                          Icon(
                             Icons.bar_chart,
                             color: AppColors.primary,
                             size: AppDimensions.iconL,
                           ),
-                          const SizedBox(width: AppDimensions.paddingM),
+                          SizedBox(width: AppDimensions.paddingM),
                           Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
@@ -119,12 +115,12 @@ class _StatsScreenState extends State<StatsScreen> {
                         ],
                       ),
 
-                      const SizedBox(height: AppDimensions.paddingXL),
+                      SizedBox(height: AppDimensions.paddingXL),
 
                       // Perfil Card
                       if (_profile != null) _buildProfileCard(_profile!),
 
-                      const SizedBox(height: AppDimensions.paddingL),
+                      SizedBox(height: AppDimensions.paddingL),
 
                       // Stats Grid - FILA 1
                       Row(
@@ -137,7 +133,7 @@ class _StatsScreenState extends State<StatsScreen> {
                               color: AppColors.primary,
                             ),
                           ),
-                          const SizedBox(width: AppDimensions.paddingM),
+                          SizedBox(width: AppDimensions.paddingM),
                           Expanded(
                             child: _buildStatCard(
                               icon: Icons.visibility,
@@ -149,7 +145,7 @@ class _StatsScreenState extends State<StatsScreen> {
                         ],
                       ),
 
-                      const SizedBox(height: AppDimensions.paddingM),
+                      SizedBox(height: AppDimensions.paddingM),
 
                       // Stats Grid - FILA 2
                       Row(
@@ -162,7 +158,7 @@ class _StatsScreenState extends State<StatsScreen> {
                               color: AppColors.favorite,
                             ),
                           ),
-                          const SizedBox(width: AppDimensions.paddingM),
+                          SizedBox(width: AppDimensions.paddingM),
                           Expanded(
                             child: _buildStatCard(
                               icon: Icons.format_quote,
@@ -174,7 +170,7 @@ class _StatsScreenState extends State<StatsScreen> {
                         ],
                       ),
 
-                      const SizedBox(height: AppDimensions.paddingM),
+                      SizedBox(height: AppDimensions.paddingM),
 
                       // Stats Grid - FILA 3 (Racha y Nivel)
                       Row(
@@ -187,7 +183,7 @@ class _StatsScreenState extends State<StatsScreen> {
                               color: AppColors.warning,
                             ),
                           ),
-                          const SizedBox(width: AppDimensions.paddingM),
+                          SizedBox(width: AppDimensions.paddingM),
                           Expanded(
                             child: _buildStatCard(
                               icon: Icons.military_tech,
@@ -199,21 +195,20 @@ class _StatsScreenState extends State<StatsScreen> {
                         ],
                       ),
 
-                      const SizedBox(height: AppDimensions.paddingL),
+                      SizedBox(height: AppDimensions.paddingL),
 
-                      // Categorías - 🆕 SECCIÓN ACTUALIZADA
+                      // Categorías
                       Text(
                         'Categorías Más Vistas',
                         style: Theme.of(context).textTheme.titleLarge,
                       ),
 
-                      const SizedBox(height: AppDimensions.paddingM),
+                      SizedBox(height: AppDimensions.paddingM),
 
                       if (_categoryCounts.isEmpty)
                         Center(
                           child: Padding(
-                            padding:
-                                const EdgeInsets.all(AppDimensions.paddingXL),
+                            padding: EdgeInsets.all(AppDimensions.paddingXL),
                             child: Text(
                               'Empieza a ver frases para generar estadísticas',
                               textAlign: TextAlign.center,
@@ -249,7 +244,7 @@ class _StatsScreenState extends State<StatsScreen> {
 
   Widget _buildProfileCard(UserProfile profile) {
     return Container(
-      padding: const EdgeInsets.all(AppDimensions.paddingL),
+      padding: EdgeInsets.all(AppDimensions.paddingL),
       decoration: BoxDecoration(
         gradient: LinearGradient(
           colors: [
@@ -268,7 +263,7 @@ class _StatsScreenState extends State<StatsScreen> {
           Container(
             width: 60,
             height: 60,
-            decoration: const BoxDecoration(
+            decoration: BoxDecoration(
               color: AppColors.primary,
               shape: BoxShape.circle,
             ),
@@ -282,7 +277,7 @@ class _StatsScreenState extends State<StatsScreen> {
               ),
             ),
           ),
-          const SizedBox(width: AppDimensions.paddingM),
+          SizedBox(width: AppDimensions.paddingM),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -291,7 +286,7 @@ class _StatsScreenState extends State<StatsScreen> {
                   profile.name,
                   style: Theme.of(context).textTheme.headlineSmall,
                 ),
-                const SizedBox(height: 4),
+                SizedBox(height: 4),
                 Text(
                   'Nivel ${profile.level} • ${profile.totalXp} XP',
                   style: Theme.of(context).textTheme.bodyMedium?.copyWith(
@@ -301,7 +296,7 @@ class _StatsScreenState extends State<StatsScreen> {
               ],
             ),
           ),
-          const Icon(
+          Icon(
             Icons.arrow_forward_ios,
             color: AppColors.textTertiary,
             size: AppDimensions.iconS,
@@ -318,7 +313,7 @@ class _StatsScreenState extends State<StatsScreen> {
     required Color color,
   }) {
     return Container(
-      padding: const EdgeInsets.all(AppDimensions.paddingL),
+      padding: EdgeInsets.all(AppDimensions.paddingL),
       decoration: BoxDecoration(
         color: AppColors.surface,
         borderRadius: BorderRadius.circular(AppDimensions.radiusM),
@@ -334,7 +329,7 @@ class _StatsScreenState extends State<StatsScreen> {
             color: color,
             size: AppDimensions.iconL,
           ),
-          const SizedBox(height: AppDimensions.paddingS),
+          SizedBox(height: AppDimensions.paddingS),
           Text(
             value,
             style: Theme.of(context).textTheme.headlineMedium?.copyWith(
@@ -342,7 +337,7 @@ class _StatsScreenState extends State<StatsScreen> {
                   fontWeight: FontWeight.bold,
                 ),
           ),
-          const SizedBox(height: 4),
+          SizedBox(height: 4),
           Text(
             title,
             textAlign: TextAlign.center,
@@ -356,7 +351,6 @@ class _StatsScreenState extends State<StatsScreen> {
   }
 
   Widget _buildCategoryBar(String category, int count, int percentage) {
-    // Colores por categoría
     Color getColorForCategory(String cat) {
       switch (cat.toLowerCase()) {
         case 'motivación':
@@ -368,9 +362,9 @@ class _StatsScreenState extends State<StatsScreen> {
         case 'relaciones':
           return AppColors.favorite;
         case 'metas':
-          return const Color(0xFF00BCD4); // Cyan
+          return const Color(0xFF00BCD4);
         case 'mentalidad':
-          return const Color(0xFF9C27B0); // Purple
+          return const Color(0xFF9C27B0);
         default:
           return AppColors.primary;
       }
@@ -379,7 +373,7 @@ class _StatsScreenState extends State<StatsScreen> {
     final color = getColorForCategory(category);
 
     return Padding(
-      padding: const EdgeInsets.only(bottom: AppDimensions.paddingM),
+      padding: EdgeInsets.only(bottom: AppDimensions.paddingM),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -396,7 +390,7 @@ class _StatsScreenState extends State<StatsScreen> {
                       shape: BoxShape.circle,
                     ),
                   ),
-                  const SizedBox(width: AppDimensions.paddingS),
+                  SizedBox(width: AppDimensions.paddingS),
                   Text(
                     category,
                     style: Theme.of(context).textTheme.bodyLarge?.copyWith(
@@ -413,7 +407,7 @@ class _StatsScreenState extends State<StatsScreen> {
               ),
             ],
           ),
-          const SizedBox(height: AppDimensions.paddingS),
+          SizedBox(height: AppDimensions.paddingS),
           ClipRRect(
             borderRadius: BorderRadius.circular(AppDimensions.radiusFull),
             child: LinearProgressIndicator(

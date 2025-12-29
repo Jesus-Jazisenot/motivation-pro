@@ -33,7 +33,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
   void _nextPage() {
     if (_currentPage < 4) {
       _pageController.nextPage(
-        duration: const Duration(milliseconds: 300),
+        duration: Duration(milliseconds: 300),
         curve: Curves.easeInOut,
       );
     } else {
@@ -44,7 +44,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
   void _previousPage() {
     if (_currentPage > 0) {
       _pageController.previousPage(
-        duration: const Duration(milliseconds: 300),
+        duration: Duration(milliseconds: 300),
         curve: Curves.easeInOut,
       );
     }
@@ -106,7 +106,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       body: Container(
-        decoration: const BoxDecoration(
+        decoration: BoxDecoration(
           gradient: LinearGradient(
             begin: Alignment.topLeft,
             end: Alignment.bottomRight,
@@ -154,14 +154,14 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
 
   Widget _buildProgressIndicator() {
     return Padding(
-      padding: const EdgeInsets.all(AppDimensions.paddingL),
+      padding: EdgeInsets.all(AppDimensions.paddingL),
       child: Row(
         children: List.generate(
           5,
           (index) => Expanded(
             child: Container(
               height: 4,
-              margin: const EdgeInsets.symmetric(
+              margin: EdgeInsets.symmetric(
                 horizontal: AppDimensions.paddingXS,
               ),
               decoration: BoxDecoration(
@@ -179,7 +179,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
 
   Widget _buildNamePage() {
     return Padding(
-      padding: const EdgeInsets.all(AppDimensions.paddingL),
+      padding: EdgeInsets.all(AppDimensions.paddingL),
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -188,14 +188,14 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
             '¡Bienvenido! 👋',
             style: Theme.of(context).textTheme.headlineLarge,
           ),
-          const SizedBox(height: AppDimensions.paddingM),
+          SizedBox(height: AppDimensions.paddingM),
           Text(
             '¿Cómo te llamas?',
             style: Theme.of(context).textTheme.headlineSmall?.copyWith(
                   color: AppColors.textSecondary,
                 ),
           ),
-          const SizedBox(height: AppDimensions.paddingXL),
+          SizedBox(height: AppDimensions.paddingXL),
           TextField(
             autofocus: true,
             style: Theme.of(context).textTheme.headlineSmall,
@@ -237,7 +237,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
     ];
 
     return Padding(
-      padding: const EdgeInsets.all(AppDimensions.paddingL),
+      padding: EdgeInsets.all(AppDimensions.paddingL),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -245,14 +245,14 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
             '¿En qué áreas quieres mejorar?',
             style: Theme.of(context).textTheme.headlineMedium,
           ),
-          const SizedBox(height: AppDimensions.paddingM),
+          SizedBox(height: AppDimensions.paddingM),
           Text(
             'Selecciona todas las que apliquen',
             style: Theme.of(context).textTheme.bodyLarge?.copyWith(
                   color: AppColors.textSecondary,
                 ),
           ),
-          const SizedBox(height: AppDimensions.paddingXL),
+          SizedBox(height: AppDimensions.paddingXL),
           Expanded(
             child: GridView.builder(
               gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
@@ -297,7 +297,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                           color:
                               isSelected ? Colors.white : AppColors.textPrimary,
                         ),
-                        const SizedBox(height: AppDimensions.paddingS),
+                        SizedBox(height: AppDimensions.paddingS),
                         Text(
                           challenge['title'] as String,
                           style:
@@ -327,7 +327,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
     ];
 
     return Padding(
-      padding: const EdgeInsets.all(AppDimensions.paddingL),
+      padding: EdgeInsets.all(AppDimensions.paddingL),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -335,19 +335,19 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
             '¿Cuándo prefieres recibir motivación?',
             style: Theme.of(context).textTheme.headlineMedium,
           ),
-          const SizedBox(height: AppDimensions.paddingM),
+          SizedBox(height: AppDimensions.paddingM),
           Text(
             'Configuraremos notificaciones para ti',
             style: Theme.of(context).textTheme.bodyLarge?.copyWith(
                   color: AppColors.textSecondary,
                 ),
           ),
-          const SizedBox(height: AppDimensions.paddingXL),
+          SizedBox(height: AppDimensions.paddingXL),
           ...times.map((time) {
             final isSelected = _preferredTimes.contains(time['value']);
 
             return Padding(
-              padding: const EdgeInsets.only(bottom: AppDimensions.paddingM),
+              padding: EdgeInsets.only(bottom: AppDimensions.paddingM),
               child: InkWell(
                 onTap: () {
                   setState(() {
@@ -359,7 +359,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                   });
                 },
                 child: Container(
-                  padding: const EdgeInsets.all(AppDimensions.paddingL),
+                  padding: EdgeInsets.all(AppDimensions.paddingL),
                   decoration: BoxDecoration(
                     color: isSelected ? AppColors.primary : AppColors.surface,
                     borderRadius: BorderRadius.circular(AppDimensions.radiusM),
@@ -376,7 +376,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                         color:
                             isSelected ? Colors.white : AppColors.textPrimary,
                       ),
-                      const SizedBox(width: AppDimensions.paddingM),
+                      SizedBox(width: AppDimensions.paddingM),
                       Text(
                         time['title'] as String,
                         style:
@@ -388,7 +388,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                       ),
                       const Spacer(),
                       if (isSelected)
-                        const Icon(
+                        Icon(
                           Icons.check_circle,
                           color: Colors.white,
                         ),
@@ -416,7 +416,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
     ];
 
     return Padding(
-      padding: const EdgeInsets.all(AppDimensions.paddingL),
+      padding: EdgeInsets.all(AppDimensions.paddingL),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -424,14 +424,14 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
             '¿Qué valores son importantes para ti?',
             style: Theme.of(context).textTheme.headlineMedium,
           ),
-          const SizedBox(height: AppDimensions.paddingM),
+          SizedBox(height: AppDimensions.paddingM),
           Text(
             'Selecciona 3-5 valores',
             style: Theme.of(context).textTheme.bodyLarge?.copyWith(
                   color: AppColors.textSecondary,
                 ),
           ),
-          const SizedBox(height: AppDimensions.paddingXL),
+          SizedBox(height: AppDimensions.paddingXL),
           Expanded(
             child: Wrap(
               spacing: AppDimensions.paddingM,
@@ -452,7 +452,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                     });
                   },
                   child: Container(
-                    padding: const EdgeInsets.symmetric(
+                    padding: EdgeInsets.symmetric(
                       horizontal: AppDimensions.paddingL,
                       vertical: AppDimensions.paddingM,
                     ),
@@ -508,7 +508,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
     ];
 
     return Padding(
-      padding: const EdgeInsets.all(AppDimensions.paddingL),
+      padding: EdgeInsets.all(AppDimensions.paddingL),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -516,19 +516,19 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
             '¿Qué tono prefieres?',
             style: Theme.of(context).textTheme.headlineMedium,
           ),
-          const SizedBox(height: AppDimensions.paddingM),
+          SizedBox(height: AppDimensions.paddingM),
           Text(
             'Esto afectará el tipo de frases que verás',
             style: Theme.of(context).textTheme.bodyLarge?.copyWith(
                   color: AppColors.textSecondary,
                 ),
           ),
-          const SizedBox(height: AppDimensions.paddingXL),
+          SizedBox(height: AppDimensions.paddingXL),
           ...tones.map((tone) {
             final isSelected = _tonePreference == tone['value'];
 
             return Padding(
-              padding: const EdgeInsets.only(bottom: AppDimensions.paddingM),
+              padding: EdgeInsets.only(bottom: AppDimensions.paddingM),
               child: InkWell(
                 onTap: () {
                   setState(() {
@@ -536,7 +536,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                   });
                 },
                 child: Container(
-                  padding: const EdgeInsets.all(AppDimensions.paddingL),
+                  padding: EdgeInsets.all(AppDimensions.paddingL),
                   decoration: BoxDecoration(
                     color: isSelected ? AppColors.primary : AppColors.surface,
                     borderRadius: BorderRadius.circular(AppDimensions.radiusM),
@@ -553,7 +553,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                         color:
                             isSelected ? Colors.white : AppColors.textPrimary,
                       ),
-                      const SizedBox(width: AppDimensions.paddingM),
+                      SizedBox(width: AppDimensions.paddingM),
                       Expanded(
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
@@ -569,7 +569,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                                         : AppColors.textPrimary,
                                   ),
                             ),
-                            const SizedBox(height: AppDimensions.paddingXS),
+                            SizedBox(height: AppDimensions.paddingXS),
                             Text(
                               tone['subtitle'] as String,
                               style: Theme.of(context)
@@ -585,7 +585,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                         ),
                       ),
                       if (isSelected)
-                        const Icon(
+                        Icon(
                           Icons.check_circle,
                           color: Colors.white,
                         ),
@@ -604,21 +604,21 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
     final canProceed = _canProceed();
 
     return Padding(
-      padding: const EdgeInsets.all(AppDimensions.paddingL),
+      padding: EdgeInsets.all(AppDimensions.paddingL),
       child: Row(
         children: [
           if (_currentPage > 0)
             Expanded(
               child: OutlinedButton.icon(
                 onPressed: _previousPage,
-                icon: const Icon(Icons.arrow_back),
+                icon: Icon(Icons.arrow_back),
                 label: Text(AppStrings.buttonBack),
                 style: OutlinedButton.styleFrom(
-                  padding: const EdgeInsets.all(AppDimensions.paddingM),
+                  padding: EdgeInsets.all(AppDimensions.paddingM),
                 ),
               ),
             ),
-          if (_currentPage > 0) const SizedBox(width: AppDimensions.paddingM),
+          if (_currentPage > 0) SizedBox(width: AppDimensions.paddingM),
           Expanded(
             flex: 2,
             child: ElevatedButton.icon(
@@ -632,7 +632,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                     : AppStrings.buttonNext,
               ),
               style: ElevatedButton.styleFrom(
-                padding: const EdgeInsets.all(AppDimensions.paddingM),
+                padding: EdgeInsets.all(AppDimensions.paddingM),
               ),
             ),
           ),

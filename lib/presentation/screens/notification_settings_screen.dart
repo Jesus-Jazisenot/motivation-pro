@@ -48,7 +48,7 @@ class _NotificationSettingsScreenState
       if (!hasPermission) {
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
+            SnackBar(
               content: Text('Se necesitan permisos para enviar notificaciones'),
               backgroundColor: AppColors.error,
             ),
@@ -114,7 +114,7 @@ class _NotificationSettingsScreenState
 
     if (mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
+        SnackBar(
           content: Text('📬 Notificación de prueba enviada'),
         ),
       );
@@ -125,7 +125,7 @@ class _NotificationSettingsScreenState
   Widget build(BuildContext context) {
     return Scaffold(
       body: Container(
-        decoration: const BoxDecoration(
+        decoration: BoxDecoration(
           gradient: LinearGradient(
             begin: Alignment.topLeft,
             end: Alignment.bottomRight,
@@ -138,7 +138,7 @@ class _NotificationSettingsScreenState
         ),
         child: SafeArea(
           child: _isLoading
-              ? const Center(
+              ? Center(
                   child: CircularProgressIndicator(
                     color: AppColors.primary,
                   ),
@@ -147,15 +147,15 @@ class _NotificationSettingsScreenState
                   children: [
                     // Header
                     Padding(
-                      padding: const EdgeInsets.all(AppDimensions.paddingL),
+                      padding: EdgeInsets.all(AppDimensions.paddingL),
                       child: Row(
                         children: [
                           IconButton(
                             onPressed: () => Navigator.pop(context),
-                            icon: const Icon(Icons.arrow_back),
+                            icon: Icon(Icons.arrow_back),
                             color: AppColors.textPrimary,
                           ),
-                          const SizedBox(width: AppDimensions.paddingM),
+                          SizedBox(width: AppDimensions.paddingM),
                           Text(
                             'Notificaciones',
                             style: Theme.of(context).textTheme.headlineMedium,
@@ -167,12 +167,12 @@ class _NotificationSettingsScreenState
                     // Content
                     Expanded(
                       child: ListView(
-                        padding: const EdgeInsets.all(AppDimensions.paddingL),
+                        padding: EdgeInsets.all(AppDimensions.paddingL),
                         children: [
                           // Activar/Desactivar
                           Container(
                             padding:
-                                const EdgeInsets.all(AppDimensions.paddingL),
+                                EdgeInsets.all(AppDimensions.paddingL),
                             decoration: BoxDecoration(
                               color: AppColors.surface,
                               borderRadius: BorderRadius.circular(
@@ -190,7 +190,7 @@ class _NotificationSettingsScreenState
                                   color: AppColors.primary,
                                   size: AppDimensions.iconL,
                                 ),
-                                const SizedBox(width: AppDimensions.paddingM),
+                                SizedBox(width: AppDimensions.paddingM),
                                 Expanded(
                                   child: Column(
                                     crossAxisAlignment:
@@ -202,7 +202,7 @@ class _NotificationSettingsScreenState
                                             .textTheme
                                             .titleMedium,
                                       ),
-                                      const SizedBox(height: 4),
+                                      SizedBox(height: 4),
                                       Text(
                                         'Recibe frases motivacionales',
                                         style: Theme.of(context)
@@ -224,7 +224,7 @@ class _NotificationSettingsScreenState
                             ),
                           ),
 
-                          const SizedBox(height: AppDimensions.paddingL),
+                          SizedBox(height: AppDimensions.paddingL),
 
                           // Horarios
                           Text(
@@ -232,7 +232,7 @@ class _NotificationSettingsScreenState
                             style: Theme.of(context).textTheme.titleLarge,
                           ),
 
-                          const SizedBox(height: AppDimensions.paddingM),
+                          SizedBox(height: AppDimensions.paddingM),
 
                           _buildTimeOption(
                             icon: Icons.wb_sunny,
@@ -255,26 +255,26 @@ class _NotificationSettingsScreenState
                             time: 'night',
                           ),
 
-                          const SizedBox(height: AppDimensions.paddingL),
+                          SizedBox(height: AppDimensions.paddingL),
 
                           // Botón de prueba
                           ElevatedButton.icon(
                             onPressed: _testNotification,
-                            icon: const Icon(Icons.send),
+                            icon: Icon(Icons.send),
                             label: const Text('Enviar Notificación de Prueba'),
                             style: ElevatedButton.styleFrom(
-                              padding: const EdgeInsets.all(
+                              padding: EdgeInsets.all(
                                 AppDimensions.paddingM,
                               ),
                             ),
                           ),
 
-                          const SizedBox(height: AppDimensions.paddingM),
+                          SizedBox(height: AppDimensions.paddingM),
 
                           // Info
                           Container(
                             padding:
-                                const EdgeInsets.all(AppDimensions.paddingM),
+                                EdgeInsets.all(AppDimensions.paddingM),
                             decoration: BoxDecoration(
                               color: AppColors.primary.withOpacity(0.1),
                               borderRadius: BorderRadius.circular(
@@ -288,7 +288,7 @@ class _NotificationSettingsScreenState
                                   color: AppColors.primary,
                                   size: AppDimensions.iconM,
                                 ),
-                                const SizedBox(width: AppDimensions.paddingM),
+                                SizedBox(width: AppDimensions.paddingM),
                                 Expanded(
                                   child: Text(
                                     'Recibirás una frase motivacional diferente cada día en los horarios seleccionados.',
@@ -322,7 +322,7 @@ class _NotificationSettingsScreenState
     final isSelected = _selectedTimes.contains(time);
 
     return Container(
-      margin: const EdgeInsets.only(bottom: AppDimensions.paddingM),
+      margin: EdgeInsets.only(bottom: AppDimensions.paddingM),
       decoration: BoxDecoration(
         color: AppColors.surface,
         borderRadius: BorderRadius.circular(AppDimensions.radiusM),

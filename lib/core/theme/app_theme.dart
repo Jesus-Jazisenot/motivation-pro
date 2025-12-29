@@ -11,11 +11,11 @@ class AppTheme {
     return ThemeData(
       useMaterial3: true,
       brightness: Brightness.dark,
-      
+
       // Colores principales
-      colorScheme: const ColorScheme.dark(
+      colorScheme: ColorScheme.dark(
         primary: AppColors.primary,
-        secondary: AppColors.secondary,
+        secondary: AppColors.accent,
         surface: AppColors.surface,
         surfaceContainer: AppColors.surface,
         error: AppColors.error,
@@ -24,10 +24,10 @@ class AppTheme {
         onSurface: AppColors.textPrimary,
         onError: Colors.white,
       ),
-      
+
       // Scaffold
       scaffoldBackgroundColor: AppColors.backgroundDark,
-      
+
       // AppBar
       appBarTheme: AppBarTheme(
         backgroundColor: Colors.transparent,
@@ -38,32 +38,32 @@ class AppTheme {
           fontWeight: FontWeight.bold,
           color: AppColors.textPrimary,
         ),
-        iconTheme: const IconThemeData(
+        iconTheme: IconThemeData(
           color: AppColors.textPrimary,
         ),
       ),
-      
+
       // Card
       cardTheme: CardThemeData(
         color: AppColors.surface,
         elevation: 0,
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(16),
-          side: const BorderSide(
+          side: BorderSide(
             color: AppColors.border,
             width: 1,
           ),
         ),
-        margin: const EdgeInsets.all(0),
+        margin: EdgeInsets.all(0),
       ),
-      
+
       // Elevated Button
       elevatedButtonTheme: ElevatedButtonThemeData(
         style: ElevatedButton.styleFrom(
           backgroundColor: AppColors.primary,
           foregroundColor: Colors.white,
           elevation: 0,
-          padding: const EdgeInsets.symmetric(
+          padding: EdgeInsets.symmetric(
             horizontal: 24,
             vertical: 16,
           ),
@@ -76,7 +76,7 @@ class AppTheme {
           ),
         ),
       ),
-      
+
       // Text Button
       textButtonTheme: TextButtonThemeData(
         style: TextButton.styleFrom(
@@ -87,33 +87,33 @@ class AppTheme {
           ),
         ),
       ),
-      
+
       // Input Decoration
       inputDecorationTheme: InputDecorationTheme(
         filled: true,
-        fillColor: AppColors.surfaceLight,
+        fillColor: AppColors.surface,
         border: OutlineInputBorder(
           borderRadius: BorderRadius.circular(12),
-          borderSide: const BorderSide(
+          borderSide: BorderSide(
             color: AppColors.border,
           ),
         ),
         enabledBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(12),
-          borderSide: const BorderSide(
+          borderSide: BorderSide(
             color: AppColors.border,
           ),
         ),
         focusedBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(12),
-          borderSide: const BorderSide(
+          borderSide: BorderSide(
             color: AppColors.primary,
             width: 2,
           ),
         ),
         errorBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(12),
-          borderSide: const BorderSide(
+          borderSide: BorderSide(
             color: AppColors.error,
           ),
         ),
@@ -124,7 +124,7 @@ class AppTheme {
           color: AppColors.textSecondary,
         ),
       ),
-      
+
       // Text Theme
       textTheme: TextTheme(
         // Headlines
@@ -143,7 +143,7 @@ class AppTheme {
           fontWeight: FontWeight.bold,
           color: AppColors.textPrimary,
         ),
-        
+
         // Titles
         headlineLarge: GoogleFonts.playfairDisplay(
           fontSize: 32,
@@ -160,7 +160,7 @@ class AppTheme {
           fontWeight: FontWeight.w600,
           color: AppColors.textPrimary,
         ),
-        
+
         // Body
         bodyLarge: GoogleFonts.inter(
           fontSize: 16,
@@ -174,7 +174,7 @@ class AppTheme {
           fontSize: 12,
           color: AppColors.textTertiary,
         ),
-        
+
         // Labels
         labelLarge: GoogleFonts.inter(
           fontSize: 14,
@@ -192,6 +192,21 @@ class AppTheme {
           color: AppColors.textTertiary,
         ),
       ),
+    );
+  }
+
+  /// Tema claro (opcional, por si lo necesitas después)
+  static ThemeData get lightTheme {
+    return ThemeData(
+      useMaterial3: true,
+      brightness: Brightness.light,
+      colorScheme: ColorScheme.light(
+        primary: AppColors.primary,
+        secondary: AppColors.accent,
+        surface: AppColors.surface,
+        error: AppColors.error,
+      ),
+      scaffoldBackgroundColor: AppColors.backgroundLight,
     );
   }
 }

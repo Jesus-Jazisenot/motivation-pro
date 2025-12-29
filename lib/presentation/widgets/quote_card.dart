@@ -54,21 +54,26 @@ class _QuoteCardState extends State<QuoteCard>
   }
 
   Future<void> _toggleFavorite() async {
+    // Actualizar UI INMEDIATAMENTE (antes de guardar en BD)
     setState(() {
       _isFavorite = !_isFavorite;
     });
 
+    // Actualizar en BD
     final updatedQuote = widget.quote.copyWith(isFavorite: _isFavorite);
-    final db = DatabaseHelper.instance;
-    await db.updateQuote(updatedQuote);
+    await DatabaseHelper.instance.updateQuote(updatedQuote);
 
+    // Mostrar feedback
     if (mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(
-            _isFavorite ? '❤️ Agregada a favoritas' : 'Removida de favoritas',
+            _isFavorite
+                ? '❤️ Añadido a favoritos'
+                : '💔 Eliminado de favoritos',
           ),
-          duration: const Duration(seconds: 2),
+          duration: const Duration(seconds: 1),
+          behavior: SnackBarBehavior.floating,
           backgroundColor:
               _isFavorite ? AppColors.favorite : AppColors.textSecondary,
         ),
@@ -93,10 +98,9 @@ class _QuoteCardState extends State<QuoteCard>
           child: Opacity(
             opacity: _fadeAnimation.value,
             child: Container(
-              margin: const EdgeInsets.all(AppDimensions.paddingL),
+              margin: EdgeInsets.all(AppDimensions.paddingL),
               constraints: BoxConstraints(
-                maxHeight: MediaQuery.of(context).size.height *
-                    0.65, // ⬅️ LIMITAR ALTURA
+                maxHeight: MediaQuery.of(context).size.height * 0.65,
               ),
               decoration: BoxDecoration(
                 gradient: LinearGradient(
@@ -121,14 +125,13 @@ class _QuoteCardState extends State<QuoteCard>
                 ],
               ),
               child: SingleChildScrollView(
-                // ⬅️ HACER SCROLLABLE
-                padding: const EdgeInsets.all(AppDimensions.paddingXL),
+                padding: EdgeInsets.all(AppDimensions.paddingXL),
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
                   children: [
                     // Categoría
                     Container(
-                      padding: const EdgeInsets.symmetric(
+                      padding: EdgeInsets.symmetric(
                         horizontal: AppDimensions.paddingM,
                         vertical: AppDimensions.paddingS,
                       ),
@@ -148,16 +151,16 @@ class _QuoteCardState extends State<QuoteCard>
                       ),
                     ),
 
-                    const SizedBox(height: AppDimensions.paddingL),
+                    SizedBox(height: AppDimensions.paddingL),
 
                     // Icono de comillas
                     Icon(
                       Icons.format_quote,
-                      size: 48, // ⬅️ TAMAÑO FIJO MÁS PEQUEÑO
+                      size: 48,
                       color: AppColors.primary.withOpacity(0.3),
                     ),
 
-                    const SizedBox(height: AppDimensions.paddingM),
+                    SizedBox(height: AppDimensions.paddingM),
 
                     // Texto de la frase
                     Text(
@@ -171,7 +174,7 @@ class _QuoteCardState extends State<QuoteCard>
                     ),
 
                     if (widget.quote.author != null) ...[
-                      const SizedBox(height: AppDimensions.paddingL),
+                      SizedBox(height: AppDimensions.paddingL),
                       Text(
                         '- ${widget.quote.author}',
                         textAlign: TextAlign.center,
@@ -182,11 +185,10 @@ class _QuoteCardState extends State<QuoteCard>
                       ),
                     ],
 
-                    const SizedBox(height: AppDimensions.paddingL),
+                    SizedBox(height: AppDimensions.paddingL),
 
                     // Botones de acción
                     Wrap(
-                      // ⬅️ CAMBIAR Row POR Wrap PARA MEJOR RESPONSIVE
                       alignment: WrapAlignment.center,
                       spacing: 8,
                       runSpacing: 8,
@@ -208,7 +210,7 @@ class _QuoteCardState extends State<QuoteCard>
                         // Compartir
                         IconButton(
                           onPressed: _shareQuote,
-                          icon: const Icon(Icons.share),
+                          icon: Icon(Icons.share),
                           color: AppColors.textSecondary,
                           iconSize: AppDimensions.iconL,
                         ),
@@ -217,12 +219,12 @@ class _QuoteCardState extends State<QuoteCard>
                         if (widget.onNextQuote != null)
                           ElevatedButton.icon(
                             onPressed: widget.onNextQuote,
-                            icon: const Icon(Icons.refresh, size: 20),
+                            icon: Icon(Icons.refresh, size: 20),
                             label: const Text('Nueva frase'),
                             style: ElevatedButton.styleFrom(
                               backgroundColor: AppColors.primary,
                               foregroundColor: Colors.white,
-                              padding: const EdgeInsets.symmetric(
+                              padding: EdgeInsets.symmetric(
                                 horizontal: 24,
                                 vertical: 12,
                               ),

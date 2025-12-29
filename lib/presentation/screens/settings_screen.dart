@@ -12,7 +12,7 @@ class SettingsScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     return Scaffold(
       body: Container(
-        decoration: const BoxDecoration(
+        decoration: BoxDecoration(
           gradient: LinearGradient(
             begin: Alignment.topLeft,
             end: Alignment.bottomRight,
@@ -28,15 +28,15 @@ class SettingsScreen extends StatelessWidget {
             children: [
               // Header
               Padding(
-                padding: const EdgeInsets.all(AppDimensions.paddingL),
+                padding: EdgeInsets.all(AppDimensions.paddingL),
                 child: Row(
                   children: [
                     IconButton(
                       onPressed: () => Navigator.pop(context),
-                      icon: const Icon(Icons.arrow_back),
+                      icon: Icon(Icons.arrow_back),
                       color: AppColors.textPrimary,
                     ),
-                    const SizedBox(width: AppDimensions.paddingM),
+                    SizedBox(width: AppDimensions.paddingM),
                     Text(
                       'Configuración',
                       style: Theme.of(context).textTheme.headlineMedium,
@@ -48,7 +48,7 @@ class SettingsScreen extends StatelessWidget {
               // Content
               Expanded(
                 child: ListView(
-                  padding: const EdgeInsets.all(AppDimensions.paddingL),
+                  padding: EdgeInsets.all(AppDimensions.paddingL),
                   children: [
                     // NOTIFICACIONES
                     _buildSettingTile(
@@ -107,7 +107,7 @@ class SettingsScreen extends StatelessWidget {
                       onTap: () {
                         // TODO: Próximamente
                         ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(
+                          SnackBar(
                             content: Text('Próximamente...'),
                           ),
                         );
@@ -123,14 +123,14 @@ class SettingsScreen extends StatelessWidget {
                       onTap: () {
                         // TODO: Próximamente
                         ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(
+                          SnackBar(
                             content: Text('Próximamente...'),
                           ),
                         );
                       },
                     ),
 
-                    const SizedBox(height: AppDimensions.paddingL),
+                    SizedBox(height: AppDimensions.paddingL),
 
                     Center(
                       child: Text(
@@ -158,7 +158,7 @@ class SettingsScreen extends StatelessWidget {
     required VoidCallback onTap,
   }) {
     return Container(
-      margin: const EdgeInsets.only(bottom: AppDimensions.paddingM),
+      margin: EdgeInsets.only(bottom: AppDimensions.paddingM),
       decoration: BoxDecoration(
         color: AppColors.surface,
         borderRadius: BorderRadius.circular(AppDimensions.radiusM),
@@ -184,7 +184,7 @@ class SettingsScreen extends StatelessWidget {
                 color: AppColors.textSecondary,
               ),
         ),
-        trailing: const Icon(
+        trailing: Icon(
           Icons.arrow_forward_ios,
           color: AppColors.textTertiary,
           size: AppDimensions.iconS,

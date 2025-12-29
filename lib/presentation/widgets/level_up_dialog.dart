@@ -77,7 +77,7 @@ class _LevelUpDialogState extends State<LevelUpDialog>
             numberOfParticles: 50,
             gravity: 0.1,
             shouldLoop: false,
-            colors: const [
+            colors: [
               AppColors.primary,
               AppColors.success,
               AppColors.warning,
@@ -99,7 +99,7 @@ class _LevelUpDialogState extends State<LevelUpDialog>
                 child: Transform.rotate(
                   angle: _rotationAnimation.value * 3.14159,
                   child: Container(
-                    padding: const EdgeInsets.all(AppDimensions.paddingXL),
+                    padding: EdgeInsets.all(AppDimensions.paddingXL),
                     decoration: BoxDecoration(
                       gradient: LinearGradient(
                         begin: Alignment.topLeft,
@@ -124,13 +124,13 @@ class _LevelUpDialogState extends State<LevelUpDialog>
                       mainAxisSize: MainAxisSize.min,
                       children: [
                         // Icono de trofeo
-                        const Icon(
+                        Icon(
                           Icons.emoji_events,
                           size: 80,
                           color: Colors.yellow,
                         ),
 
-                        const SizedBox(height: AppDimensions.paddingL),
+                        SizedBox(height: AppDimensions.paddingL),
 
                         // Texto LEVEL UP
                         Text(
@@ -145,7 +145,7 @@ class _LevelUpDialogState extends State<LevelUpDialog>
                               ),
                         ),
 
-                        const SizedBox(height: AppDimensions.paddingM),
+                        SizedBox(height: AppDimensions.paddingM),
 
                         // Número de nivel
                         Container(
@@ -173,7 +173,7 @@ class _LevelUpDialogState extends State<LevelUpDialog>
                           ),
                         ),
 
-                        const SizedBox(height: AppDimensions.paddingL),
+                        SizedBox(height: AppDimensions.paddingL),
 
                         // XP total
                         Text(
@@ -184,14 +184,12 @@ class _LevelUpDialogState extends State<LevelUpDialog>
                                   ),
                         ),
 
-                        const SizedBox(height: AppDimensions.paddingXL),
+                        SizedBox(height: AppDimensions.paddingXL),
 
-                        // Botón cerrar
                         // Botón cerrar
                         ElevatedButton(
                           onPressed: () {
                             Navigator.of(context).pop();
-                            // Forzar actualización del estado padre
                             WidgetsBinding.instance.addPostFrameCallback((_) {
                               // El callback ya está manejado por el parent
                             });
@@ -199,7 +197,7 @@ class _LevelUpDialogState extends State<LevelUpDialog>
                           style: ElevatedButton.styleFrom(
                             backgroundColor: Colors.white,
                             foregroundColor: AppColors.primary,
-                            padding: const EdgeInsets.symmetric(
+                            padding: EdgeInsets.symmetric(
                               horizontal: AppDimensions.paddingXL,
                               vertical: AppDimensions.paddingM,
                             ),

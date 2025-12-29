@@ -25,7 +25,7 @@ class _SplashScreenState extends State<SplashScreen>
 
     // Configurar animaciones
     _controller = AnimationController(
-      duration: const Duration(milliseconds: 1500),
+      duration: Duration(milliseconds: 1500),
       vsync: this,
     );
 
@@ -51,7 +51,7 @@ class _SplashScreenState extends State<SplashScreen>
   }
 
   Future<void> _checkFirstLaunch() async {
-    await Future.delayed(const Duration(milliseconds: 2500));
+    await Future.delayed(Duration(milliseconds: 2500));
 
     if (!mounted) return;
 
@@ -60,7 +60,7 @@ class _SplashScreenState extends State<SplashScreen>
     // Evitar esperas indefinidas al inicializar la BD: timeout de 5s
     final profile = await db
         .getUserProfile()
-        .timeout(const Duration(seconds: 5), onTimeout: () => null);
+        .timeout(Duration(seconds: 5), onTimeout: () => null);
 
     if (profile == null) {
       // Primera vez - Ir a Onboarding
@@ -89,7 +89,7 @@ class _SplashScreenState extends State<SplashScreen>
   Widget build(BuildContext context) {
     return Scaffold(
       body: Container(
-        decoration: const BoxDecoration(
+        decoration: BoxDecoration(
           gradient: LinearGradient(
             begin: Alignment.topLeft,
             end: Alignment.bottomRight,
@@ -126,7 +126,7 @@ class _SplashScreenState extends State<SplashScreen>
                             ),
                           ],
                         ),
-                        child: const Icon(
+                        child: Icon(
                           Icons.auto_awesome,
                           size: 70,
                           color: Colors.white,
@@ -137,7 +137,7 @@ class _SplashScreenState extends State<SplashScreen>
                 },
               ),
 
-              const SizedBox(height: 40),
+              SizedBox(height: 40),
 
               // Título
               FadeTransition(
@@ -151,7 +151,7 @@ class _SplashScreenState extends State<SplashScreen>
                 ),
               ),
 
-              const SizedBox(height: 12),
+              SizedBox(height: 12),
 
               // Subtítulo
               FadeTransition(
@@ -164,12 +164,12 @@ class _SplashScreenState extends State<SplashScreen>
                 ),
               ),
 
-              const SizedBox(height: 60),
+              SizedBox(height: 60),
 
               // Loading indicator
               FadeTransition(
                 opacity: _fadeAnimation,
-                child: const SizedBox(
+                child: SizedBox(
                   width: 40,
                   height: 40,
                   child: CircularProgressIndicator(

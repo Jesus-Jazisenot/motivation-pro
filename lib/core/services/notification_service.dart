@@ -114,7 +114,7 @@ class NotificationService {
 
     // Si ya pasó la hora de hoy, programar para mañana
     if (scheduledDate.isBefore(now)) {
-      scheduledDate = scheduledDate.add(const Duration(days: 1));
+      scheduledDate = scheduledDate.add(Duration(days: 1));
     }
 
     final tzScheduledDate = tz.TZDateTime.from(
@@ -209,7 +209,7 @@ class NotificationService {
     );
 
     if (scheduledDate.isBefore(now)) {
-      scheduledDate = scheduledDate.add(const Duration(days: 1));
+      scheduledDate = scheduledDate.add(Duration(days: 1));
     }
 
     final tzScheduledDate = tz.TZDateTime.from(

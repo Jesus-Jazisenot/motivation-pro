@@ -39,8 +39,12 @@ dependencies:
   timezone: ^0.9.4
   permission_handler: ^11.3.1
   
-  # Permisos
-  
+   # Conectividad
+
+  connectivity_plus: ^6.0.5  # ⬅️ AGREGAR ESTA LÍNEA
+
+  # Traducción
+  translator: ^1.0.0  
   
   # Compartir
   share_plus: ^7.2.1
@@ -50,6 +54,8 @@ dependencies:
   
   # JSON
   json_annotation: ^4.8.1
+
+  google_generative_ai: ^0.2.0  # ⬅️ AGREGAR ESTA LÍNEA
   
   # Fechas
   intl: ^0.18.1

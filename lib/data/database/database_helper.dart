@@ -5,6 +5,8 @@ import '../models/user_profile.dart';
 import '../models/daily_stats.dart';
 import '../../core/services/quote_api_service.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import '../../core/services/translation_service.dart';
+import '../../core/services/connectivity_service.dart'; // ⬅️ AGREGAR
 
 /// Helper para gestionar la base de datos SQLite
 class DatabaseHelper {
@@ -168,49 +170,98 @@ class DatabaseHelper {
     );
   }
 
-  /// Obtener frase aleatoria no vista recientemente
-  /// Obtener frase aleatoria con algoritmo mejorado (NUNCA se acaba)
-  /// Obtener frase aleatoria - NUNCA retorna null
-  /// Obtener frase aleatoria - NUNCA retorna null
+  /// Obtener frase aleatoria con sistema anti-repetición
   Future<Quote?> getRandomQuote() async {
     try {
       final db = await database;
 
-      // 1. Frases disponibles sin restricción de tiempo
+      // 1. PRIORIDAD MÁXIMA: Frases NUNCA vistas
       var result = await db.rawQuery('''
-      SELECT * FROM quotes 
-      ORDER BY RANDOM() 
-      LIMIT 1
-    ''');
+        SELECT * FROM quotes 
+        WHERE last_shown IS NULL
+        ORDER BY RANDOM() 
+        LIMIT 1
+      ''');
 
       if (result.isNotEmpty) {
-        print('✅ Frase encontrada');
+        print('✅ Frase NUEVA (nunca vista)');
         return Quote.fromMap(result.first);
       }
 
-      // 2. Si NO hay frases, cargar las iniciales
+      // 2. PRIORIDAD ALTA: Frases no vistas en las últimas 12 horas
+      result = await db.rawQuery('''
+        SELECT * FROM quotes 
+        WHERE last_shown < datetime('now', '-12 hours')
+        ORDER BY view_count ASC, RANDOM() 
+        LIMIT 1
+      ''');
+
+      if (result.isNotEmpty) {
+        print('✅ Frase no vista en 12h');
+        return Quote.fromMap(result.first);
+      }
+
+      // 3. PRIORIDAD MEDIA: Frases no vistas en las últimas 6 horas
+      result = await db.rawQuery('''
+        SELECT * FROM quotes 
+        WHERE last_shown < datetime('now', '-6 hours')
+        ORDER BY view_count ASC, RANDOM() 
+        LIMIT 1
+      ''');
+
+      if (result.isNotEmpty) {
+        print('✅ Frase no vista en 6h');
+        return Quote.fromMap(result.first);
+      }
+
+      // 4. PRIORIDAD BAJA: Frases no vistas en la última hora
+      result = await db.rawQuery('''
+        SELECT * FROM quotes 
+        WHERE last_shown < datetime('now', '-1 hour')
+        ORDER BY view_count ASC, RANDOM() 
+        LIMIT 1
+      ''');
+
+      if (result.isNotEmpty) {
+        print('✅ Frase no vista en 1h');
+        return Quote.fromMap(result.first);
+      }
+
+      // 5. ÚLTIMO RECURSO: La menos vista
+      result = await db.rawQuery('''
+        SELECT * FROM quotes 
+        ORDER BY view_count ASC, last_shown ASC, RANDOM() 
+        LIMIT 1
+      ''');
+
+      if (result.isNotEmpty) {
+        print('⚠️ Usando frase menos vista (todas vistas recientemente)');
+        return Quote.fromMap(result.first);
+      }
+
+      // 6. Si NO hay frases, cargar iniciales
       print('⚠️ No hay frases en BD - Cargando iniciales');
       await _loadInitialQuotes();
 
-      // 3. Intentar de nuevo
       result = await db.rawQuery('''
-      SELECT * FROM quotes 
-      ORDER BY RANDOM() 
-      LIMIT 1
-    ''');
+        SELECT * FROM quotes 
+        ORDER BY RANDOM() 
+        LIMIT 1
+      ''');
 
       if (result.isNotEmpty) {
         print('✅ Frase inicial cargada');
         return Quote.fromMap(result.first);
       }
 
-      // 4. Si TODO falla, crear frase de emergencia manual
+      // 7. EMERGENCIA: Crear frase manual
       print('🚨 Creando frase de emergencia');
       final emergency = Quote(
         text:
             'El éxito es la suma de pequeños esfuerzos repetidos día tras día.',
         author: 'Robert Collier',
         category: 'Motivación',
+        language: 'es',
         lastShown: null,
         viewCount: 0,
       );
@@ -219,12 +270,11 @@ class DatabaseHelper {
       return emergency;
     } catch (e) {
       print('🚨 Error crítico en getRandomQuote: $e');
-
-      // Frase de emergencia sin guardar en BD
       return Quote(
-        text: 'Ve a Settings → Fuente de Frases → Activar APIs',
+        text: 'Activa las APIs en Settings para miles de frases nuevas',
         author: 'Motivation PRO',
         category: 'Motivación',
+        language: 'es',
         lastShown: null,
         viewCount: 0,
       );
@@ -327,41 +377,210 @@ class DatabaseHelper {
     return result.first['total'] as int? ?? 0;
   }
 
-  /// Obtener frase híbrida (API + Local) - NUNCA retorna null
-  /// Obtener frase híbrida - Simplificado
+  // ==========================================
+  // MÉTODOS HÍBRIDOS Y TRADUCCIÓN
+  // ==========================================
+  /// Obtener frase híbrida con filtro de idioma Y traducción automática
+  /// Obtener frase híbrida con filtro de idioma Y traducción automática
   Future<Quote?> getHybridQuote() async {
     try {
       final prefs = await SharedPreferences.getInstance();
       final useApi = prefs.getBool('use_api') ?? true;
+      final languagePref = prefs.getString('language_preference') ?? 'both';
 
+      print('⚙️ Preferencias: API=$useApi, Idioma=$languagePref');
+
+      // Si no quiere usar APIs, solo local
       if (!useApi) {
-        print('⚙️ APIs desactivadas');
+        print('💾 APIs desactivadas - usando local');
         return await getRandomQuote();
       }
 
-      // Intentar API con timeout corto
-      try {
-        final apiService = QuoteApiService.instance;
-        final apiQuote = await apiService
-            .getRandomQuote()
-            .timeout(const Duration(seconds: 5));
+      // ⬅️ NUEVO: Verificar conexión ANTES de intentar APIs
+      final connectivityService = ConnectivityService.instance;
+      final hasInternet = await connectivityService.hasConnection();
 
-        if (apiQuote != null) {
-          final quote = apiService.apiQuoteToQuote(apiQuote);
-          try {
-            await insertQuote(quote);
-          } catch (e) {
-            print('Duplicate quote, skipping: $e');
-          }
-          print('📡 API quote');
-          return quote;
-        }
-      } catch (e) {
-        print('API timeout/error: $e');
+      if (!hasInternet) {
+        print('📡 Sin internet - usando cache local');
+        return await getRandomQuote();
       }
 
-      // Fallback a local
-      print('💾 Local quote');
+      // Resto del código sigue igual...
+      final db = await database;
+      final apiService = QuoteApiService.instance;
+      const maxAttempts = 10;
+
+      // INTENTAR OBTENER FRASE NUEVA DE API
+      for (int attempt = 1; attempt <= maxAttempts; attempt++) {
+        // ... resto del código existente
+        print('🔄 Intento $attempt de $maxAttempts');
+
+        Quote? quote;
+        try {
+          final apiQuote = await apiService
+              .getRandomQuote()
+              .timeout(Duration(seconds: 5));
+
+          if (apiQuote != null) {
+            quote = apiService.apiQuoteToQuote(apiQuote);
+            print('📡 Frase obtenida de API (inglés)');
+          } else {
+            print('⚠️ API retornó null');
+            continue; // Intentar de nuevo
+          }
+        } catch (e) {
+          print('API error en intento $attempt: $e');
+          continue; // Intentar de nuevo
+        }
+
+        if (quote == null) continue;
+
+        // APLICAR PREFERENCIA DE IDIOMA
+
+        // 1. Usuario quiere SOLO ESPAÑOL
+        if (languagePref == 'es') {
+          print('🇪🇸 Traduciendo frase a español...');
+
+          final translationService = TranslationService.instance;
+          final translatedText =
+              await translationService.translateToSpanish(quote.text);
+
+          // Verificar si ya existe
+          final existing = await db.rawQuery('''
+          SELECT * FROM quotes 
+          WHERE text = ?
+          LIMIT 1
+        ''', [translatedText]);
+
+          if (existing.isNotEmpty) {
+            print('⚠️ Traducción ya existe, intento $attempt');
+            continue; // Intentar con otra frase de API
+          }
+
+          // Crear nueva frase traducida
+          final translatedQuote = Quote(
+            text: translatedText,
+            author: quote.author,
+            category: quote.category,
+            source: 'api-translated',
+            language: 'es',
+            lastShown: null,
+            viewCount: 0,
+          );
+
+          try {
+            await insertQuote(translatedQuote);
+            print('✅ Nueva traducción guardada');
+          } catch (e) {
+            print('Error guardando: $e');
+          }
+
+          return translatedQuote; // Éxito - retornar
+        }
+
+        // 2. Usuario quiere SOLO INGLÉS
+        else if (languagePref == 'en') {
+          print('🇬🇧 Frase en inglés (original de API)');
+
+          // Verificar si ya existe
+          final existing = await db.rawQuery('''
+          SELECT * FROM quotes 
+          WHERE text = ?
+          LIMIT 1
+        ''', [quote.text]);
+
+          if (existing.isNotEmpty) {
+            print('⚠️ Frase ya existe, intento $attempt');
+            continue; // Intentar con otra frase de API
+          }
+
+          // Marcar como inglés
+          final englishQuote = quote.copyWith(language: 'en');
+
+          try {
+            await insertQuote(englishQuote);
+            print('✅ Nueva frase en inglés guardada');
+          } catch (e) {
+            print('Error guardando: $e');
+          }
+
+          return englishQuote; // Éxito - retornar
+        }
+
+        // 3. Usuario quiere AMBOS
+        else {
+          print('🌐 Modo mixto');
+
+          // 50% traducir, 50% inglés
+          final shouldTranslate = DateTime.now().second % 2 == 0;
+
+          if (shouldTranslate) {
+            print('🔄 Traduciendo a español (mixto)...');
+            final translationService = TranslationService.instance;
+            final translatedText =
+                await translationService.translateToSpanish(quote.text);
+
+            // Verificar duplicado
+            final existing = await db.rawQuery('''
+            SELECT * FROM quotes 
+            WHERE text = ?
+            LIMIT 1
+          ''', [translatedText]);
+
+            if (existing.isNotEmpty) {
+              print('⚠️ Ya existe, intento $attempt');
+              continue; // Intentar de nuevo
+            }
+
+            final translatedQuote = Quote(
+              text: translatedText,
+              author: quote.author,
+              category: quote.category,
+              source: 'api-translated',
+              language: 'es',
+              lastShown: null,
+              viewCount: 0,
+            );
+
+            try {
+              await insertQuote(translatedQuote);
+              print('✅ Traducción guardada (mixto)');
+            } catch (e) {
+              print('Error: $e');
+            }
+
+            return translatedQuote;
+          } else {
+            print('📡 Frase en inglés (mixto)');
+
+            // Verificar duplicado
+            final existing = await db.rawQuery('''
+            SELECT * FROM quotes 
+            WHERE text = ?
+            LIMIT 1
+          ''', [quote.text]);
+
+            if (existing.isNotEmpty) {
+              print('⚠️ Ya existe, intento $attempt');
+              continue; // Intentar de nuevo
+            }
+
+            final englishQuote = quote.copyWith(language: 'en');
+
+            try {
+              await insertQuote(englishQuote);
+              print('✅ Frase en inglés guardada (mixto)');
+            } catch (e) {
+              print('Error: $e');
+            }
+
+            return englishQuote;
+          }
+        }
+      }
+
+      // Si después de 3 intentos no encontró nada nuevo, usar local
+      print('⚠️ Después de $maxAttempts intentos, usando frases locales');
       return await getRandomQuote();
     } catch (e) {
       print('🚨 Error en hybrid: $e');
@@ -391,6 +610,7 @@ class DatabaseHelper {
             'El éxito es la suma de pequeños esfuerzos repetidos día tras día.',
         author: 'Robert Collier',
         category: 'Motivación',
+        language: 'es',
         lastShown: null,
         viewCount: 0,
       ),
@@ -398,6 +618,7 @@ class DatabaseHelper {
         text: 'No cuentes los días, haz que los días cuenten.',
         author: 'Muhammad Ali',
         category: 'Motivación',
+        language: 'es',
         lastShown: null,
         viewCount: 0,
       ),
@@ -405,6 +626,7 @@ class DatabaseHelper {
         text: 'El único modo de hacer un gran trabajo es amar lo que haces.',
         author: 'Steve Jobs',
         category: 'Productividad',
+        language: 'es',
         lastShown: null,
         viewCount: 0,
       ),
@@ -412,6 +634,7 @@ class DatabaseHelper {
         text: 'Cree que puedes y ya estarás a medio camino.',
         author: 'Theodore Roosevelt',
         category: 'Mentalidad',
+        language: 'es',
         lastShown: null,
         viewCount: 0,
       ),
@@ -419,6 +642,7 @@ class DatabaseHelper {
         text: 'La vida es 10% lo que te pasa y 90% cómo reaccionas a ello.',
         author: 'Charles R. Swindoll',
         category: 'Bienestar',
+        language: 'es',
         lastShown: null,
         viewCount: 0,
       ),
