@@ -1,24 +1,22 @@
 import 'package:flutter/material.dart';
-import '../../core/constants/app_colors.dart';
-import '../../core/constants/app_strings.dart';
-import '../../data/database/database_helper.dart';
-import '../../data/models/quote.dart';
-import '../widgets/quote_card.dart';
-import 'settings_screen.dart';
-import '../../core/services/stats_service.dart';
-import '../widgets/xp_bar.dart';
-import '../widgets/level_up_dialog.dart';
-import '../../data/models/user_profile.dart';
 import 'package:flutter/services.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'dart:math';
-import '../../core/services/connectivity_service.dart';
+import 'package:share_plus/share_plus.dart';
+import '../../core/constants/app_colors.dart';
+import '../../data/models/mood_entry.dart';
+import '../../core/constants/app_strings.dart';
 import '../../core/services/ai_service.dart';
+import '../../core/services/connectivity_service.dart';
 import '../../core/services/notification_service.dart';
+import '../../core/services/stats_service.dart';
+import '../../data/database/database_helper.dart';
+import '../../data/models/quote.dart';
+import '../../data/models/user_profile.dart';
+import '../widgets/level_up_dialog.dart';
+import '../widgets/xp_bar.dart';
 import '../widgets/streak_indicator.dart';
-import '../widgets/daily_challenge_card.dart';
-import '../widgets/mood_picker_widget.dart';
 import 'reflection_screen.dart';
+import 'settings_screen.dart';
 import 'package:in_app_review/in_app_review.dart';
 
 class HomeScreen extends StatefulWidget {
@@ -34,6 +32,7 @@ class _HomeScreenState extends State<HomeScreen> {
   bool _isLoading = true;
   bool _hasInternet = true;
   UserProfile? _userProfile;
+  bool _isGeneratingAi = false;
 
   @override
   void initState() {
@@ -42,84 +41,37 @@ class _HomeScreenState extends State<HomeScreen> {
     _loadData();
   }
 
-  // ⬇️⬇️⬇️ MÉTODO NUEVO AGREGADO ⬇️⬇️⬇️
-  /// Guardar última frase para el widget
   Future<void> _saveLastQuoteForWidget(Quote quote) async {
     try {
       final prefs = await SharedPreferences.getInstance();
       await prefs.setString('last_quote_text', quote.text);
       await prefs.setString('last_quote_author', quote.author ?? 'Anónimo');
-      print(
-          '✅ Última frase guardada para widget: ${quote.text.substring(0, min(30, quote.text.length))}...');
-    } catch (e) {
-      print('⚠️ Error guardando última frase: $e');
-    }
-  }
-  // ⬆️⬆️⬆️ FIN MÉTODO NUEVO ⬆️⬆️⬆️
-
-  @override
-  void didChangeDependencies() {
-    super.didChangeDependencies();
-    _refreshIfNeeded();
+    } catch (_) {}
   }
 
-  Future<void> _refreshIfNeeded() async {
-    final prefs = await SharedPreferences.getInstance();
-    final useApi = prefs.getBool('use_api') ?? true;
-    print('ℹ️ Settings: use_api = $useApi');
+  Future<void> _checkConnection() async {
+    final hasConnection =
+        await ConnectivityService.instance.hasConnection();
+    if (mounted) setState(() => _hasInternet = hasConnection);
   }
 
   Future<void> _loadData() async {
-    print('🔵 LOAD DATA: Iniciando...');
-
-    if (mounted) {
-      setState(() {
-        _isLoading = true;
-      });
-    }
-
+    if (mounted) setState(() => _isLoading = true);
     try {
-      final db = DatabaseHelper.instance;
-
-      // Cargar nombre de usuario y perfil
-      final profile = await db.getUserProfile();
+      final profile = await DatabaseHelper.instance.getUserProfile();
       if (profile != null) {
         _userName = profile.name;
         _userProfile = profile;
-        print('🔵 LOAD DATA: Perfil cargado - $_userName');
-
-        // Programar recordatorio de racha si tiene racha activa
         if (profile.currentStreak > 0) {
           NotificationService.instance
               .scheduleStreakReminder(profile.currentStreak);
         }
       }
-
-      // Cargar frase del día (misma todo el día)
       await _loadDailyQuote();
-
-      print('🔵 LOAD DATA: Frase cargada');
     } catch (e) {
-      print('🚨 Error en _loadData: $e');
+      print('Error en _loadData: $e');
     } finally {
-      if (mounted) {
-        setState(() {
-          _isLoading = false;
-        });
-      }
-    }
-
-    print('🔵 LOAD DATA: Terminado');
-  }
-
-  Future<void> _checkConnection() async {
-    final connectivity = ConnectivityService.instance;
-    final hasConnection = await connectivity.hasConnection();
-
-    if (mounted) {
-      setState(() {
-        _hasInternet = hasConnection;
-      });
+      if (mounted) setState(() => _isLoading = false);
     }
   }
 
@@ -128,545 +80,137 @@ class _HomeScreenState extends State<HomeScreen> {
       final quote = await DatabaseHelper.instance.getDailyQuote();
       if (quote != null && mounted) {
         setState(() => _currentQuote = quote);
-        await DatabaseHelper.instance.updateQuote(
-          quote.copyWith(
-            lastShown: DateTime.now(),
-            viewCount: quote.viewCount + 1,
-          ),
-        );
+        await DatabaseHelper.instance.updateQuote(quote.copyWith(
+          lastShown: DateTime.now(),
+          viewCount: quote.viewCount + 1,
+        ));
         await _saveLastQuoteForWidget(quote);
       }
-    } catch (e) {
-      print('🚨 Error en _loadDailyQuote: $e');
+    } catch (_) {
       await _loadRandomQuote();
     }
   }
 
   Future<void> _loadRandomQuote() async {
-    print('🔵 Iniciando _loadRandomQuote()');
-
     try {
-      print('🔵 Obteniendo database...');
-      final db = DatabaseHelper.instance;
-
-      print('🔵 Llamando getRandomQuote()...');
-      final quote = await db.getRandomQuote().timeout(
-        Duration(seconds: 5),
-        onTimeout: () {
-          print('⏱️ TIMEOUT en getRandomQuote');
-          return null;
-        },
+      final quote = await DatabaseHelper.instance.getRandomQuote().timeout(
+        const Duration(seconds: 5),
+        onTimeout: () => null,
       );
-
-      if (quote != null) {
-        print(
-            '🔵 Quote obtenido: ${quote.text.substring(0, min(20, quote.text.length))}...');
-
-        final updatedQuote = quote.copyWith(
-          lastShown: DateTime.now(),
-          viewCount: quote.viewCount + 1,
-        );
-
-        await db.updateQuote(updatedQuote);
-        print('✅ Quote marcado como visto - last_shown actualizado');
-
-        if (mounted) {
-          setState(() {
-            _currentQuote = quote;
-          });
-        }
-        print('🔵 Estado actualizado con quote');
-      } else {
-        print('❌ Quote es NULL');
-        if (mounted) {
-          setState(() {
-            _currentQuote = null;
-          });
-        }
+      if (quote != null && mounted) {
+        setState(() => _currentQuote = quote);
       }
-    } catch (e, stackTrace) {
-      print('🚨 ERROR en _loadRandomQuote:');
-      print('Error: $e');
-      print('StackTrace: $stackTrace');
-
-      if (mounted) {
-        setState(() {
-          _currentQuote = null;
-        });
-      }
-    }
-
-    print('🔵 _loadRandomQuote() TERMINÓ');
+    } catch (_) {}
   }
 
-  Future<void> _loadRandomQuoteWithStats() async {
-    print('🟣 Iniciando _loadRandomQuoteWithStats()');
-
-    if (_isLoading) {
-      print('⚠️ Ya está cargando, saliendo...');
-      return;
-    }
-
-    setState(() {
-      _isLoading = true;
-    });
-
+  Future<void> _loadNextQuote() async {
+    if (_isLoading) return;
+    setState(() => _isLoading = true);
     try {
       await _checkConnection();
-
-      final db = DatabaseHelper.instance;
-      final quote = await db.getHybridQuote().timeout(
-        Duration(seconds: 8),
-        onTimeout: () {
-          print('⏱️ TIMEOUT en getHybridQuote');
-          return null;
-        },
+      final quote = await DatabaseHelper.instance.getHybridQuote().timeout(
+        const Duration(seconds: 8),
+        onTimeout: () => null,
       );
-
       if (quote != null) {
-        setState(() {
-          _currentQuote = quote;
-        });
-
-        final updatedQuote = quote.copyWith(
+        setState(() => _currentQuote = quote);
+        await DatabaseHelper.instance.updateQuote(quote.copyWith(
           lastShown: DateTime.now(),
           viewCount: quote.viewCount + 1,
-        );
-        await db.updateQuote(updatedQuote);
-
-        // ⬇️⬇️⬇️ LLAMADA AGREGADA ⬇️⬇️⬇️
+        ));
         await _saveLastQuoteForWidget(quote);
-        // ⬆️⬆️⬆️ FIN LLAMADA ⬆️⬆️⬆️
-
         await StatsService.instance.trackQuoteView(quote);
 
         final oldLevel = _userProfile?.level ?? 1;
-
         await StatsService.instance.addXP(10);
         await StatsService.instance.updateUserStreak();
-
         await _checkAndRequestReview();
 
-        final newProfile = await db.getUserProfile();
-        if (newProfile != null) {
-          final newLevel = newProfile.level;
-
-          setState(() {
-            _userProfile = newProfile;
-          });
-
-          if (newLevel > oldLevel && mounted) {
+        final newProfile = await DatabaseHelper.instance.getUserProfile();
+        if (newProfile != null && mounted) {
+          setState(() => _userProfile = newProfile);
+          if (newProfile.level > oldLevel) {
             await showDialog(
               context: context,
               barrierDismissible: false,
               builder: (_) => LevelUpDialog(
-                newLevel: newLevel,
+                newLevel: newProfile.level,
                 totalXp: newProfile.totalXp,
               ),
             );
-
-            if (mounted) {
-              setState(() {});
-            }
           }
         }
 
-        if (mounted) {
-          final quoteData = {
+        try {
+          await const MethodChannel('com.example.motivation_pro/widget')
+              .invokeMethod('updateWidget', {
             'text': quote.text,
             'author': quote.author ?? 'Anónimo',
-          };
-
-          try {
-            await const MethodChannel('com.example.motivation_pro/widget')
-                .invokeMethod('updateWidget', quoteData);
-          } catch (e) {
-            print('Widget update error: $e');
-          }
-        }
+          });
+        } catch (_) {}
       }
-    } catch (e, stackTrace) {
-      print('🚨 ERROR en _loadRandomQuoteWithStats:');
-      print('Error: $e');
-      print('StackTrace: $stackTrace');
-
-      if (mounted) {
-        setState(() {
-          _currentQuote = null;
-        });
-      }
-    } finally {
-      if (mounted) {
-        setState(() {
-          _isLoading = false;
-        });
-      }
+    } catch (_) {}
+    finally {
+      if (mounted) setState(() => _isLoading = false);
     }
   }
 
   Future<void> _checkAndRequestReview() async {
     try {
       final prefs = await SharedPreferences.getInstance();
-      final alreadyRequested = prefs.getBool('review_requested') ?? false;
-      if (alreadyRequested) return;
-
-      final streak = _userProfile?.currentStreak ?? 0;
-      if (streak < 3) return;
-
+      if (prefs.getBool('review_requested') ?? false) return;
+      if ((_userProfile?.currentStreak ?? 0) < 3) return;
       final inAppReview = InAppReview.instance;
       if (await inAppReview.isAvailable()) {
         await inAppReview.requestReview();
         await prefs.setBool('review_requested', true);
       }
-    } catch (e) {
-      print('Review request error: $e');
-    }
+    } catch (_) {}
   }
 
   Future<void> _generateAiQuote() async {
-    print('🤖 Iniciando generación con IA...');
-
-    if (_userProfile == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('⚠️ Perfil no encontrado'),
-          backgroundColor: AppColors.warning,
-        ),
-      );
-      return;
-    }
-
-    // Mostrar loading
-    showDialog(
-      context: context,
-      barrierDismissible: false,
-      builder: (context) => Center(
-        child: Container(
-          padding: EdgeInsets.all(32),
-          decoration: BoxDecoration(
-            color: AppColors.surface,
-            borderRadius: BorderRadius.circular(16),
-          ),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              CircularProgressIndicator(color: AppColors.accent),
-              SizedBox(height: 16),
-              Text(
-                '✨ Generando tu frase...',
-                style: Theme.of(context).textTheme.titleMedium,
-              ),
-              SizedBox(height: 8),
-              Text(
-                'Esto puede tomar unos segundos',
-                style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                      color: AppColors.textSecondary,
-                    ),
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-
+    if (_userProfile == null || _isGeneratingAi) return;
+    setState(() => _isGeneratingAi = true);
     try {
-      final aiService = AiService.instance;
       final generatedText =
-          await aiService.generatePersonalizedQuote(_userProfile!);
-
-      // Cerrar loading
-      if (mounted) Navigator.pop(context);
-
-      if (generatedText != null && generatedText.isNotEmpty) {
-        // Crear Quote con la frase generada
+          await AiService.instance.generatePersonalizedQuote(_userProfile!);
+      if (generatedText != null && generatedText.isNotEmpty && mounted) {
         final aiQuote = Quote(
           text: generatedText,
-          author: 'IA Personalizada para ${_userProfile!.name}',
+          author: null, // frase personal, sin autor ficticio
           category: 'Personalizada',
           source: 'ai-generated',
           language: 'es',
-          isFavorite: true,
+          isFavorite: false,
           lastShown: DateTime.now(),
           viewCount: 1,
         );
-
-        // Guardar en BD
-        final db = DatabaseHelper.instance;
-        await db.insertQuote(aiQuote);
-
-        // Mostrar
-        setState(() {
-          _currentQuote = aiQuote;
-        });
-
-        // ⬇️⬇️⬇️ LLAMADA AGREGADA ⬇️⬇️⬇️
-        await _saveLastQuoteForWidget(aiQuote);
-        // ⬆️⬆️⬆️ FIN LLAMADA ⬆️⬆️⬆️
-
-        // Agregar XP bonus por usar IA
+        final id = await DatabaseHelper.instance.insertQuote(aiQuote);
+        final saved = aiQuote.copyWith(id: id);
+        setState(() => _currentQuote = saved);
+        await _saveLastQuoteForWidget(saved);
         await StatsService.instance.addXP(25);
-
-        // Actualizar perfil
-        final newProfile = await db.getUserProfile();
+        final newProfile = await DatabaseHelper.instance.getUserProfile();
         if (newProfile != null && mounted) {
-          setState(() {
-            _userProfile = newProfile;
-          });
+          setState(() => _userProfile = newProfile);
         }
-
-        // Actualizar widget de Android
         if (mounted) {
-          final quoteData = {
-            'text': aiQuote.text,
-            'author': aiQuote.author ?? 'IA Personalizada',
-          };
-
-          try {
-            await const MethodChannel('com.example.motivation_pro/widget')
-                .invokeMethod('updateWidget', quoteData);
-            print('✅ Widget actualizado con frase de IA');
-          } catch (e) {
-            print('⚠️ Error actualizando widget: $e');
-          }
-        }
-
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text('✨ Frase personalizada generada (+25 XP)'),
-              backgroundColor: AppColors.success,
-              duration: Duration(seconds: 2),
-            ),
-          );
-        }
-      } else {
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text('⚠️ No se pudo generar frase. Intenta de nuevo'),
-              backgroundColor: AppColors.warning,
-            ),
-          );
+          ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+            content: const Text('✨ Frase personalizada generada (+25 XP)'),
+            backgroundColor: AppColors.success,
+            duration: const Duration(seconds: 2),
+          ));
         }
       }
     } catch (e) {
-      print('❌ Error generando con IA: $e');
-
-      // Cerrar loading si aún está abierto
-      if (mounted && Navigator.canPop(context)) {
-        Navigator.pop(context);
-      }
-
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('❌ Error: ${e.toString()}'),
-            backgroundColor: AppColors.error,
-          ),
-        );
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+          content: Text('Error al generar: $e'),
+          backgroundColor: AppColors.error,
+        ));
       }
-    }
-  }
-
-  Future<void> _resetQuotes() async {
-    print('🟡 RESET: Iniciando resetQuotes()');
-
-    setState(() {
-      _isLoading = true;
-    });
-
-    try {
-      print('🟡 RESET: Obteniendo database...');
-      final db = DatabaseHelper.instance;
-      final database = await db.database;
-
-      print('🟡 RESET: Ejecutando UPDATE...');
-      await database.rawUpdate('''
-        UPDATE quotes 
-        SET last_shown = NULL
-      ''').timeout(Duration(seconds: 3));
-
-      print('✅ Todas las frases reseteadas');
-
-      print('🟡 RESET: Esperando 500ms...');
-      await Future.delayed(Duration(milliseconds: 500));
-
-      print('🟡 RESET: Llamando _loadRandomQuote()...');
-      await _loadRandomQuote();
-
-      print('🟡 RESET: _loadRandomQuote() terminó');
-
-      if (mounted && _currentQuote != null) {
-        setState(() {
-          _isLoading = false;
-        });
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('✅ Frases reseteadas'),
-            backgroundColor: AppColors.success,
-            duration: Duration(seconds: 2),
-          ),
-        );
-      } else if (mounted) {
-        setState(() {
-          _isLoading = false;
-        });
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content:
-                Text('⚠️ Frases reseteadas pero no se pudo cargar ninguna'),
-            backgroundColor: AppColors.warning,
-            duration: Duration(seconds: 3),
-          ),
-        );
-      }
-    } catch (e, stackTrace) {
-      print('🚨 ERROR en resetQuotes:');
-      print('Error: $e');
-      print('StackTrace: $stackTrace');
-
-      if (mounted) {
-        setState(() {
-          _isLoading = false;
-        });
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('❌ Error: ${e.toString()}'),
-            backgroundColor: AppColors.error,
-            duration: Duration(seconds: 3),
-          ),
-        );
-      }
-    }
-
-    print('🟡 RESET: Método terminó');
-  }
-
-  Future<void> _forceLoadEmergencyQuotes() async {
-    print('🚨 EMERGENCIA: Iniciando carga forzada...');
-
-    setState(() {
-      _isLoading = true;
-    });
-
-    try {
-      final db = DatabaseHelper.instance;
-
-      final emergencyQuotes = [
-        Quote(
-          text:
-              'El éxito es la suma de pequeños esfuerzos repetidos día tras día.',
-          author: 'Robert Collier',
-          category: 'Motivación',
-          language: 'es',
-          lastShown: null,
-          viewCount: 0,
-        ),
-        Quote(
-          text: 'No cuentes los días, haz que los días cuenten.',
-          author: 'Muhammad Ali',
-          category: 'Motivación',
-          language: 'es',
-          lastShown: null,
-          viewCount: 0,
-        ),
-        Quote(
-          text: 'El único modo de hacer un gran trabajo es amar lo que haces.',
-          author: 'Steve Jobs',
-          category: 'Productividad',
-          language: 'es',
-          lastShown: null,
-          viewCount: 0,
-        ),
-        Quote(
-          text: 'Cree que puedes y ya estarás a medio camino.',
-          author: 'Theodore Roosevelt',
-          category: 'Mentalidad',
-          language: 'es',
-          lastShown: null,
-          viewCount: 0,
-        ),
-        Quote(
-          text: 'La vida es 10% lo que te pasa y 90% cómo reaccionas.',
-          author: 'Charles Swindoll',
-          category: 'Bienestar',
-          language: 'es',
-          lastShown: null,
-          viewCount: 0,
-        ),
-        Quote(
-          text:
-              'El futuro pertenece a quienes creen en la belleza de sus sueños.',
-          author: 'Eleanor Roosevelt',
-          category: 'Motivación',
-          language: 'es',
-          lastShown: null,
-          viewCount: 0,
-        ),
-        Quote(
-          text: 'La mejor manera de predecir el futuro es crearlo.',
-          author: 'Peter Drucker',
-          category: 'Metas',
-          language: 'es',
-          lastShown: null,
-          viewCount: 0,
-        ),
-        Quote(
-          text:
-              'Elige un trabajo que ames y no tendrás que trabajar ni un día.',
-          author: 'Confucio',
-          category: 'Productividad',
-          language: 'es',
-          lastShown: null,
-          viewCount: 0,
-        ),
-      ];
-
-      int inserted = 0;
-      for (final quote in emergencyQuotes) {
-        try {
-          await db.insertQuote(quote);
-          inserted++;
-          print('✅ Frase $inserted insertada');
-        } catch (e) {
-          print('⚠️ Frase duplicada, continuando...');
-        }
-      }
-
-      print('✅ Total frases insertadas: $inserted');
-
-      await Future.delayed(Duration(milliseconds: 300));
-      await _loadRandomQuote();
-
-      if (mounted) {
-        setState(() {
-          _isLoading = false;
-        });
-
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('✅ $inserted frases cargadas'),
-            backgroundColor: AppColors.success,
-          ),
-        );
-      }
-    } catch (e, stackTrace) {
-      print('🚨 Error en modo emergencia:');
-      print('Error: $e');
-      print('StackTrace: $stackTrace');
-
-      if (mounted) {
-        setState(() {
-          _isLoading = false;
-        });
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Error: ${e.toString()}'),
-            backgroundColor: AppColors.error,
-            duration: Duration(seconds: 5),
-          ),
-        );
-      }
+    } finally {
+      if (mounted) setState(() => _isGeneratingAi = false);
     }
   }
 
@@ -686,344 +230,464 @@ class _HomeScreenState extends State<HomeScreen> {
           ),
         ),
         child: SafeArea(
-          child: _isLoading
-              ? Center(
-                  child: CircularProgressIndicator(
-                    color: AppColors.primary,
-                  ),
-                )
+          child: _isLoading && _currentQuote == null
+              ? Center(child: CircularProgressIndicator(color: AppColors.primary))
               : Column(
                   children: [
-                    // Banner de sin conexión
-                    if (!_hasInternet)
-                      Container(
-                        width: double.infinity,
-                        padding: EdgeInsets.symmetric(
-                          horizontal: 16,
-                          vertical: 12,
-                        ),
-                        decoration: BoxDecoration(
-                          color: AppColors.warning.withOpacity(0.15),
-                          border: Border(
-                            bottom: BorderSide(
-                              color: AppColors.warning.withOpacity(0.3),
-                              width: 1,
-                            ),
-                          ),
-                        ),
-                        child: Row(
-                          children: [
-                            Icon(
-                              Icons.wifi_off_rounded,
-                              color: AppColors.warning,
-                              size: 20,
-                            ),
-                            SizedBox(width: 12),
-                            Expanded(
-                              child: Text(
-                                'Sin conexión - Mostrando frases guardadas',
-                                style: TextStyle(
-                                  color: AppColors.warning,
-                                  fontSize: 13,
-                                  fontWeight: FontWeight.w500,
-                                ),
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
+                    // ── Header compacto ──
+                    _buildHeader(),
 
-                    // Header
-                    Padding(
-                      padding: EdgeInsets.all(24),
-                      child: Row(
-                        children: [
-                          Expanded(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(
-                                  '¡Hola, $_userName! 👋',
-                                  style:
-                                      Theme.of(context).textTheme.headlineSmall,
-                                ),
-                                SizedBox(height: 6),
-                                Row(
-                                  children: [
-                                    Text(
-                                      AppStrings.homeQuoteOfDay,
-                                      style: Theme.of(context)
-                                          .textTheme
-                                          .bodyMedium
-                                          ?.copyWith(
-                                            color: AppColors.textSecondary,
-                                          ),
-                                    ),
-                                    if (_userProfile != null &&
-                                        _userProfile!.currentStreak > 0) ...[
-                                      SizedBox(width: 10),
-                                      StreakIndicator(
-                                          streak:
-                                              _userProfile!.currentStreak),
-                                    ],
-                                  ],
-                                ),
-                              ],
-                            ),
-                          ),
-                          IconButton(
-                            onPressed: () {
-                              Navigator.push(
-                                context,
-                                MaterialPageRoute(
-                                  builder: (_) => const SettingsScreen(),
-                                ),
-                              );
-                            },
-                            icon: Icon(Icons.settings_outlined),
-                            color: AppColors.textSecondary,
-                          ),
-                        ],
-                      ),
-                    ),
+                    // ── Sin conexión (banner fino) ──
+                    if (!_hasInternet) _buildOfflineBanner(),
 
-                    // XP Bar
-                    if (_userProfile != null)
-                      Padding(
-                        padding: EdgeInsets.symmetric(horizontal: 24),
-                        child: XpBar(
-                          currentXp: _userProfile!.totalXp,
-                          level: _userProfile!.level,
-                        ),
-                      ),
-
-                    const SizedBox(height: 8),
-
-                    // Estado de ánimo diario
-                    const MoodPickerWidget(),
-
-                    const SizedBox(height: 8),
-
-                    // Desafío del día
-                    const DailyChallengeCard(),
-
-                    const SizedBox(height: 8),
-
-                    // Quote Card o Pantalla de Emergencia
+                    // ── FRASE — ocupa todo el espacio disponible ──
                     Expanded(
-                      child: Center(
-                        child: _currentQuote != null
-                            ? Column(
-                                children: [
-                                  // Quote Card
-                                  Expanded(
-                                    child: QuoteCard(
-                                      key: ValueKey(_currentQuote!.id ??
-                                          _currentQuote!.text),
-                                      quote: _currentQuote!,
-                                      onNextQuote: _loadRandomQuoteWithStats,
-                                    ),
-                                  ),
-
-                                  // Botones de acción
-                                  Padding(
-                                    padding: const EdgeInsets.symmetric(
-                                      horizontal: 24,
-                                      vertical: 8,
-                                    ),
-                                    child: Row(
-                                      children: [
-                                        // Botón IA
-                                        Expanded(
-                                          child: ElevatedButton.icon(
-                                            onPressed: _generateAiQuote,
-                                            icon: const Icon(
-                                                Icons.auto_awesome,
-                                                size: 18),
-                                            label: const Text(
-                                              'Generar con IA',
-                                              style: TextStyle(
-                                                  fontWeight: FontWeight.bold),
-                                            ),
-                                            style: ElevatedButton.styleFrom(
-                                              backgroundColor: AppColors.accent,
-                                              foregroundColor: Colors.white,
-                                              padding:
-                                                  const EdgeInsets.symmetric(
-                                                      vertical: 14),
-                                              shape: RoundedRectangleBorder(
-                                                borderRadius:
-                                                    BorderRadius.circular(24),
-                                              ),
-                                              elevation: 6,
-                                            ),
-                                          ),
-                                        ),
-                                        const SizedBox(width: 10),
-                                        // Botón Reflexionar
-                                        ElevatedButton.icon(
-                                          onPressed: _currentQuote == null
-                                              ? null
-                                              : () => Navigator.push(
-                                                    context,
-                                                    MaterialPageRoute(
-                                                      builder: (_) =>
-                                                          ReflectionScreen(
-                                                              quote:
-                                                                  _currentQuote!),
-                                                    ),
-                                                  ),
-                                          icon: const Icon(
-                                              Icons.edit_note_outlined,
-                                              size: 18),
-                                          label: const Text('Reflexionar'),
-                                          style: ElevatedButton.styleFrom(
-                                            backgroundColor: AppColors.surface,
-                                            foregroundColor: AppColors.primary,
-                                            padding: const EdgeInsets.symmetric(
-                                                vertical: 14, horizontal: 16),
-                                            shape: RoundedRectangleBorder(
-                                              borderRadius:
-                                                  BorderRadius.circular(24),
-                                              side: BorderSide(
-                                                  color: AppColors.primary
-                                                      .withOpacity(0.4)),
-                                            ),
-                                            elevation: 0,
-                                          ),
-                                        ),
-                                      ],
-                                    ),
-                                  ),
-                                ],
-                              )
-                            : Padding(
-                                padding: EdgeInsets.all(32),
-                                child: SingleChildScrollView(
-                                  child: Column(
-                                    mainAxisAlignment: MainAxisAlignment.center,
-                                    children: [
-                                      Icon(
-                                        Icons.warning_amber_rounded,
-                                        size: 80,
-                                        color: AppColors.warning,
-                                      ),
-                                      SizedBox(height: 24),
-                                      Text(
-                                        'Sin Frases Disponibles',
-                                        style: Theme.of(context)
-                                            .textTheme
-                                            .headlineSmall
-                                            ?.copyWith(
-                                              color: AppColors.textPrimary,
-                                              fontWeight: FontWeight.bold,
-                                            ),
-                                        textAlign: TextAlign.center,
-                                      ),
-                                      SizedBox(height: 12),
-                                      Text(
-                                        'Vamos a solucionar esto',
-                                        style: Theme.of(context)
-                                            .textTheme
-                                            .bodyMedium
-                                            ?.copyWith(
-                                              color: AppColors.textSecondary,
-                                            ),
-                                        textAlign: TextAlign.center,
-                                      ),
-                                      SizedBox(height: 32),
-
-                                      // BOTÓN 1: Cargar Frases de Emergencia
-                                      ElevatedButton.icon(
-                                        onPressed: _forceLoadEmergencyQuotes,
-                                        icon: Icon(Icons.add_circle_outline,
-                                            size: 24),
-                                        label: const Text(
-                                          'Cargar Frases Ahora',
-                                          style: TextStyle(
-                                            fontSize: 16,
-                                            fontWeight: FontWeight.bold,
-                                          ),
-                                        ),
-                                        style: ElevatedButton.styleFrom(
-                                          backgroundColor: AppColors.success,
-                                          foregroundColor: Colors.white,
-                                          padding: EdgeInsets.symmetric(
-                                            horizontal: 24,
-                                            vertical: 16,
-                                          ),
-                                          shape: RoundedRectangleBorder(
-                                            borderRadius:
-                                                BorderRadius.circular(24),
-                                          ),
-                                          elevation: 8,
-                                        ),
-                                      ),
-
-                                      SizedBox(height: 12),
-
-                                      // BOTÓN 2: Resetear
-                                      OutlinedButton.icon(
-                                        onPressed: _resetQuotes,
-                                        icon: Icon(Icons.refresh),
-                                        label:
-                                            const Text('Resetear Existentes'),
-                                        style: OutlinedButton.styleFrom(
-                                          foregroundColor: AppColors.primary,
-                                          side: BorderSide(
-                                            color: AppColors.primary,
-                                            width: 2,
-                                          ),
-                                          padding: EdgeInsets.symmetric(
-                                            horizontal: 24,
-                                            vertical: 12,
-                                          ),
-                                          shape: RoundedRectangleBorder(
-                                            borderRadius:
-                                                BorderRadius.circular(24),
-                                          ),
-                                        ),
-                                      ),
-
-                                      SizedBox(height: 12),
-
-                                      // BOTÓN 3: APIs
-                                      TextButton.icon(
-                                        onPressed: () {
-                                          Navigator.push(
-                                            context,
-                                            MaterialPageRoute(
-                                              builder: (_) =>
-                                                  const SettingsScreen(),
-                                            ),
-                                          );
-                                        },
-                                        icon: Icon(Icons.cloud_outlined),
-                                        label: const Text(
-                                            'Activar APIs (Miles de frases)'),
-                                        style: TextButton.styleFrom(
-                                          foregroundColor: AppColors.primary,
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-                                ),
-                              ),
-                      ),
+                      child: _currentQuote != null
+                          ? _buildQuoteSection()
+                          : _buildEmptyState(),
                     ),
 
-                    // Bottom info
-                    Padding(
-                      padding: EdgeInsets.all(24),
-                      child: Text(
-                        'Desliza hacia abajo para actualizar',
-                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                              color: AppColors.textTertiary,
-                            ),
-                      ),
+                    // ── Acciones inferiores ──
+                    if (_currentQuote != null) _buildBottomActions(),
+                  ],
+                ),
+        ),
+      ),
+    );
+  }
+
+  // ── Header compacto: nombre + streak + XP + settings en una sola fila ──
+  Widget _buildHeader() {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(20, 14, 12, 8),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        Text(
+                          '¡Hola, $_userName!',
+                          style: Theme.of(context)
+                              .textTheme
+                              .titleMedium
+                              ?.copyWith(fontWeight: FontWeight.bold),
+                        ),
+                        if (_userProfile != null &&
+                            _userProfile!.currentStreak > 0) ...[
+                          const SizedBox(width: 8),
+                          StreakIndicator(streak: _userProfile!.currentStreak),
+                        ],
+                      ],
+                    ),
+                    Text(
+                      AppStrings.homeQuoteOfDay,
+                      style: TextStyle(
+                          color: AppColors.textSecondary, fontSize: 12),
                     ),
                   ],
                 ),
+              ),
+              // Mood del día (compacto, solo el emoji seleccionado)
+              const _CompactMoodButton(),
+              IconButton(
+                onPressed: () => Navigator.push(context,
+                    MaterialPageRoute(builder: (_) => const SettingsScreen())),
+                icon: const Icon(Icons.settings_outlined, size: 22),
+                color: AppColors.textSecondary,
+              ),
+            ],
+          ),
+          // XP bar delgada
+          if (_userProfile != null)
+            Padding(
+              padding: const EdgeInsets.only(top: 6),
+              child: XpBar(
+                currentXp: _userProfile!.totalXp,
+                level: _userProfile!.level,
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildOfflineBanner() {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+      color: AppColors.warning.withValues(alpha: 0.12),
+      child: Row(
+        children: [
+          Icon(Icons.wifi_off_rounded, color: AppColors.warning, size: 14),
+          const SizedBox(width: 8),
+          Text(
+            'Sin conexión — mostrando frases guardadas',
+            style: TextStyle(color: AppColors.warning, fontSize: 12),
+          ),
+        ],
+      ),
+    );
+  }
+
+  // ── La frase ocupa el espacio y se centra visualmente ──
+  Widget _buildQuoteSection() {
+    final quote = _currentQuote!;
+    return GestureDetector(
+      onVerticalDragEnd: (details) {
+        if (details.primaryVelocity != null &&
+            details.primaryVelocity! < -300) {
+          _loadNextQuote(); // swipe up = nueva frase
+        }
+      },
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 28),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            // Comilla decorativa
+            Text(
+              '"',
+              style: TextStyle(
+                color: AppColors.primary.withValues(alpha: 0.25),
+                fontSize: 120,
+                height: 0.6,
+                fontFamily: 'Georgia',
+              ),
+            ),
+            const SizedBox(height: 16),
+
+            // TEXTO DE LA FRASE — protagonista
+            Text(
+              quote.text,
+              textAlign: TextAlign.center,
+              style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+                    height: 1.55,
+                    fontWeight: FontWeight.w500,
+                    letterSpacing: 0.1,
+                  ),
+            ),
+
+            // Autor (solo si existe y no es "IA Personalizada")
+            if (quote.author != null &&
+                !quote.author!.startsWith('IA') &&
+                quote.author!.isNotEmpty) ...[
+              const SizedBox(height: 20),
+              Text(
+                '— ${quote.author}',
+                textAlign: TextAlign.center,
+                style: TextStyle(
+                  color: AppColors.textSecondary,
+                  fontSize: 14,
+                  fontStyle: FontStyle.italic,
+                ),
+              ),
+            ],
+
+            const SizedBox(height: 28),
+
+            // Categoría (chip pequeño)
+            Container(
+              padding:
+                  const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+              decoration: BoxDecoration(
+                color: AppColors.primary.withValues(alpha: 0.12),
+                borderRadius: BorderRadius.circular(20),
+              ),
+              child: Text(
+                quote.category.toUpperCase(),
+                style: TextStyle(
+                  color: AppColors.primary,
+                  fontSize: 10,
+                  fontWeight: FontWeight.bold,
+                  letterSpacing: 1.4,
+                ),
+              ),
+            ),
+
+            const SizedBox(height: 32),
+
+            // Hint de swipe
+            Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Icon(Icons.keyboard_arrow_up,
+                    size: 16, color: AppColors.textTertiary),
+                const SizedBox(width: 4),
+                Text(
+                  'Desliza arriba para nueva frase',
+                  style: TextStyle(
+                      color: AppColors.textTertiary, fontSize: 12),
+                ),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  // ── Acciones en la parte inferior: iconos + dos botones ──
+  Widget _buildBottomActions() {
+    final quote = _currentQuote!;
+    return Container(
+      padding: const EdgeInsets.fromLTRB(20, 8, 20, 16),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          // Iconos de acción (favorito, reflexionar, compartir)
+          Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              _ActionIcon(
+                icon: quote.isFavorite ? Icons.favorite : Icons.favorite_border,
+                color: quote.isFavorite ? AppColors.favorite : AppColors.textSecondary,
+                onTap: _toggleFavorite,
+              ),
+              const SizedBox(width: 16),
+              _ActionIcon(
+                icon: Icons.edit_note_outlined,
+                onTap: () => Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                      builder: (_) => ReflectionScreen(quote: quote)),
+                ),
+              ),
+              const SizedBox(width: 16),
+              _ActionIcon(
+                icon: Icons.share_outlined,
+                onTap: _shareQuote,
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+
+          // Botón principal: Nueva frase + Generar con IA
+          Row(
+            children: [
+              Expanded(
+                child: OutlinedButton.icon(
+                  onPressed: _isLoading ? null : _loadNextQuote,
+                  icon: _isLoading
+                      ? SizedBox(
+                          width: 14,
+                          height: 14,
+                          child: CircularProgressIndicator(
+                              strokeWidth: 2, color: AppColors.primary),
+                        )
+                      : const Icon(Icons.refresh, size: 18),
+                  label: const Text('Nueva frase'),
+                  style: OutlinedButton.styleFrom(
+                    foregroundColor: AppColors.primary,
+                    side: BorderSide(color: AppColors.primary.withValues(alpha: 0.5)),
+                    padding: const EdgeInsets.symmetric(vertical: 13),
+                    shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(24)),
+                  ),
+                ),
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: ElevatedButton.icon(
+                  onPressed: _isGeneratingAi ? null : _generateAiQuote,
+                  icon: _isGeneratingAi
+                      ? const SizedBox(
+                          width: 14,
+                          height: 14,
+                          child: CircularProgressIndicator(
+                              strokeWidth: 2, color: Colors.white),
+                        )
+                      : const Icon(Icons.auto_awesome, size: 18),
+                  label: const Text('Generar con IA'),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: AppColors.accent,
+                    foregroundColor: Colors.white,
+                    padding: const EdgeInsets.symmetric(vertical: 13),
+                    shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(24)),
+                    elevation: 0,
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildEmptyState() {
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.all(32),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(Icons.warning_amber_rounded,
+                size: 64, color: AppColors.warning),
+            const SizedBox(height: 20),
+            Text('Sin frases disponibles',
+                style: Theme.of(context).textTheme.titleLarge),
+            const SizedBox(height: 12),
+            ElevatedButton.icon(
+              onPressed: _loadData,
+              icon: const Icon(Icons.refresh),
+              label: const Text('Reintentar'),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: AppColors.primary,
+                foregroundColor: Colors.white,
+                shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(24)),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Future<void> _toggleFavorite() async {
+    if (_currentQuote == null) return;
+    final updated =
+        _currentQuote!.copyWith(isFavorite: !_currentQuote!.isFavorite);
+    await DatabaseHelper.instance.updateQuote(updated);
+    setState(() => _currentQuote = updated);
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+        content: Text(updated.isFavorite
+            ? '❤️ Añadido a favoritos'
+            : '💔 Eliminado de favoritos'),
+        duration: const Duration(seconds: 1),
+        behavior: SnackBarBehavior.floating,
+      ));
+    }
+  }
+
+  void _shareQuote() {
+    if (_currentQuote == null) return;
+    final q = _currentQuote!;
+    final text = q.author != null && q.author!.isNotEmpty
+        ? '"${q.text}"\n\n— ${q.author}'
+        : '"${q.text}"';
+    Share.share(text);
+  }
+}
+
+// ── Widget compacto de mood en el header ──
+class _CompactMoodButton extends StatefulWidget {
+  const _CompactMoodButton();
+
+  @override
+  State<_CompactMoodButton> createState() => _CompactMoodButtonState();
+}
+
+class _CompactMoodButtonState extends State<_CompactMoodButton> {
+  int? _todayMood;
+
+  @override
+  void initState() {
+    super.initState();
+    _load();
+  }
+
+  Future<void> _load() async {
+    final mood =
+        await DatabaseHelper.instance.getMoodForDate(DateTime.now());
+    if (mounted) setState(() => _todayMood = mood?.mood);
+  }
+
+  void _showPicker() {
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: AppColors.surface,
+      shape: const RoundedRectangleBorder(
+          borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
+      builder: (_) => Padding(
+        padding: const EdgeInsets.all(24),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text('¿Cómo te sientes hoy?',
+                style: Theme.of(context)
+                    .textTheme
+                    .titleMedium
+                    ?.copyWith(fontWeight: FontWeight.bold)),
+            const SizedBox(height: 20),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+              children: List.generate(5, (i) {
+                final value = i + 1;
+                return GestureDetector(
+                  onTap: () async {
+                    final entry = MoodEntry(
+                        mood: value, createdAt: DateTime.now());
+                    await DatabaseHelper.instance.insertMood(entry);
+                    setState(() => _todayMood = value);
+                    if (mounted) Navigator.pop(context);
+                  },
+                  child: Column(
+                    children: [
+                      Text(MoodEntry.emojiForMood(value),
+                          style: const TextStyle(fontSize: 32)),
+                      const SizedBox(height: 4),
+                      Text(MoodEntry.labelForMood(value),
+                          style: TextStyle(
+                              color: AppColors.textSecondary, fontSize: 11)),
+                    ],
+                  ),
+                );
+              }),
+            ),
+            const SizedBox(height: 16),
+          ],
+        ),
+      ),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: _showPicker,
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+        child: Text(
+          _todayMood != null ? MoodEntry.emojiForMood(_todayMood!) : '🙂',
+          style: const TextStyle(fontSize: 24),
+        ),
+      ),
+    );
+  }
+}
+
+// ── Icono de acción con ripple ──
+class _ActionIcon extends StatelessWidget {
+  final IconData icon;
+  final VoidCallback onTap;
+  final Color? color;
+
+  const _ActionIcon({
+    required this.icon,
+    required this.onTap,
+    this.color,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(24),
+      child: Padding(
+        padding: const EdgeInsets.all(10),
+        child: Icon(
+          icon,
+          size: 24,
+          color: color ?? AppColors.textSecondary,
         ),
       ),
     );

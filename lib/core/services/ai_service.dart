@@ -84,43 +84,43 @@ class AiService {
     return await _generateAdvancedLocalQuote(profile);
   }
 
-  /// Generador LOCAL — frases reales basadas en el tema del usuario
+  /// Generador LOCAL — frases personales y directas al usuario
   Future<String> _generateAdvancedLocalQuote(UserProfile profile) async {
     final random = Random();
+    final name = profile.name;
     final topic = await _translateChallenge(profile);
     final tone = profile.tonePreference;
 
-    // Banco de frases reales por tono
     final energeticQuotes = [
-      'La acción constante sobre $topic convierte la intención en resultado.',
-      'No esperes el momento perfecto para avanzar en $topic. El momento eres tú.',
-      'Cada día que trabajas en $topic eres una versión más difícil de rendirse.',
-      'El que domina $topic no lo hace por motivación. Lo hace por hábito.',
-      'Empiezas en $topic con lo que tienes. Terminas con lo que construiste.',
+      '¿Sabes qué te diferencia, $name? Que hoy vas a actuar sobre $topic aunque no tengas ganas.',
+      'Tu energía en $topic no necesita ser perfecta. Solo necesita ser real. Dale.',
+      '$name, no hay mejor momento para avanzar en $topic que este. Empuja.',
+      'El que tú de mañana recuerda lo que el tú de hoy decidió hacer con $topic.',
+      'No hay motivación que llegue antes de actuar en $topic. La motivación es consecuencia. Muévete.',
     ];
 
     final calmQuotes = [
-      'El progreso en $topic no se mide en días, sino en la dirección que eliges.',
-      'La paciencia con $topic no es esperar. Es avanzar sin prisa y sin pausa.',
-      'Cada pequeño paso en $topic deja una huella más profunda que los grandes saltos.',
-      'La serenidad en $topic es la fuerza que los impacientes nunca encuentran.',
-      'No se trata de dominar $topic rápido. Se trata de no abandonarlo.',
+      'Tu camino en $topic no tiene que ser rápido, $name. Solo tiene que ser tuyo.',
+      'Cada día que le das aunque sea un poco a $topic estás eligiendo quién quieres ser.',
+      '$name, la constancia en $topic no grita. Solo avanza, silenciosa y segura.',
+      'No necesitas claridad total para seguir. Solo necesitas dar el siguiente paso en $topic.',
+      'El progreso real en $topic lo ves mirando hacia atrás, no hacia adelante. Confía.',
     ];
 
     final directQuotes = [
-      'O actúas hoy en $topic, o mañana seguirás en el mismo lugar.',
-      '$topic no se resuelve con intención. Se resuelve con ejecución.',
-      'El tiempo que no dedicas a $topic no regresa. El que dedicas, tampoco.',
-      'Sin compromiso real con $topic, el resto son solo palabras.',
-      'La diferencia en $topic está en lo que haces cuando nadie te obliga.',
+      '$name, o hoy haces algo con $topic o mañana te dices lo mismo. Elige.',
+      'Para en $topic. No cuando estés cansado. Cuando hayas terminado.',
+      'Tu compromiso con $topic vale más que tu estado de ánimo de hoy.',
+      'No hay excusa lo suficientemente buena para no avanzar en $topic. Ninguna.',
+      '$name, lo que haces con $topic cuando nadie mira es lo que cuenta.',
     ];
 
     final balancedQuotes = [
-      'El verdadero avance en $topic ocurre cuando dejas de medir el esfuerzo.',
-      'Construir en $topic exige constancia, no perfección.',
-      'La mejor versión de ti mismo se forja día a día en $topic.',
-      'Lo que inviertes en $topic hoy es interés que cobra el futuro.',
-      'El camino en $topic no siempre es recto. Lo importante es no detenerse.',
+      'No te pido perfección en $topic, $name. Te pido que no pares.',
+      'Cada vez que vuelves a $topic después de fallar, eso es carácter. Sigue.',
+      '$name, lo que construyes en $topic hoy nadie te lo puede quitar mañana.',
+      'Tu historia con $topic no termina aquí. Está empezando a ponerse buena.',
+      'No estás luchando contra $topic. Lo estás conquistando, a tu ritmo.',
     ];
 
     final pool = switch (tone) {
@@ -262,46 +262,45 @@ Solo la frase.
   }
 
   String _buildPrompt(UserProfile profile) {
+    final name = profile.name;
     final topics = profile.challenges.isNotEmpty
-        ? profile.challenges.join(', ')
+        ? profile.challenges.join(' y ')
         : profile.values.isNotEmpty
-            ? profile.values.join(', ')
+            ? profile.values.join(' y ')
             : 'superación personal';
 
-    final tone = _getToneDescription(profile.tonePreference);
+    final toneInstruction = _getToneInstruction(profile.tonePreference);
 
     return '''
-Genera UNA frase motivacional original y poderosa sobre: $topics.
-Tono: $tone.
+Escríbele UNA frase motivacional personal a $name sobre: $topics.
+$toneInstruction
 
-Reglas estrictas:
-- Suena como una cita de un filósofo, escritor o pensador reconocido
-- NO menciones nombres de personas
-- NO uses frases genéricas o clichés conocidos
-- Máximo 2 oraciones cortas
+Reglas:
+- Dirígete a $name directamente. Usa "tú", "te", "tu" o menciona su nombre UNA vez de forma natural
+- Suena como un mentor cercano hablando en privado, no como una cita grabada en piedra
+- Referencia de forma concreta a $topics — no de manera genérica
+- Máximo 2 oraciones. Naturales, humanas, directas
 - En español
-- Sin comillas ni signos innecesarios
-- Sin explicaciones, solo la frase
+- Sin comillas, sin signos extraños, sin explicaciones
+- NO empieces con "$name," — intégralo dentro de la frase o usa "tú"
 
-Ejemplos del estilo buscado:
-"La disciplina es la puerta que separa el deseo de la realidad."
-"No buscas motivación. La construyes acción por acción."
-"El progreso silencioso supera siempre al ruido del que nunca empieza."
+Ejemplos del estilo que quiero (para una persona que trabaja en disciplina):
+"Tu disciplina de hoy es el único argumento que importa. No el de ayer, el de hoy."
+"Sé que no siempre tienes ganas, $name. Hazlo igual. Eso es lo que te separa."
+"No estás construyendo hábitos. Te estás construyendo a ti mismo."
 ''';
   }
 
-  String _getToneDescription(String tone) {
+  String _getToneInstruction(String tone) {
     switch (tone) {
       case 'energetic':
-        return 'Energético y motivador';
+        return 'Tono: enérgico, que encienda, que motive a actuar ahora mismo.';
       case 'calm':
-        return 'Calmado y reflexivo';
-      case 'balanced':
-        return 'Balanceado';
+        return 'Tono: calmado y reflexivo, como alguien que te habla con serenidad y sabiduría.';
       case 'direct':
-        return 'Directo y claro';
+        return 'Tono: muy directo y sin rodeos, va al punto, sin adornos.';
       default:
-        return 'Motivador';
+        return 'Tono: equilibrado, cercano y honesto.';
     }
   }
 
@@ -331,7 +330,7 @@ Ejemplos del estilo buscado:
             : 'mejorar personalmente';
         final prompt = '''
 Genera UN micro-desafío concreto y alcanzable para hoy relacionado con: $challenge.
-El desafío es para ${profile.name}, con tono ${_getToneDescription(profile.tonePreference)}.
+El desafío es para ${profile.name}, con tono ${_getToneInstruction(profile.tonePreference)}.
 Requisitos:
 - Una sola acción concreta (máximo 15 palabras)
 - Alcanzable en el día de hoy
