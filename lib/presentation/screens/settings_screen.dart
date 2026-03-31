@@ -6,6 +6,8 @@ import 'achievements_screen.dart';
 import 'api_settings_screen.dart';
 import 'theme_selector_screen.dart';
 import 'affirmations_screen.dart';
+import 'habits_screen.dart';
+import 'breathing_screen.dart';
 
 class SettingsScreen extends StatelessWidget {
   const SettingsScreen({super.key});
@@ -127,6 +129,38 @@ class SettingsScreen extends StatelessWidget {
                           context,
                           MaterialPageRoute(
                             builder: (_) => const AffirmationsScreen(),
+                          ),
+                        );
+                      },
+                    ),
+
+                    // HÁBITOS
+                    _buildSettingTile(
+                      context,
+                      icon: Icons.check_circle_outline,
+                      title: 'Hábitos',
+                      subtitle: 'Rastrea tus hábitos diarios con racha propia',
+                      onTap: () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (_) => const HabitsScreen(),
+                          ),
+                        );
+                      },
+                    ),
+
+                    // RESPIRACIÓN
+                    _buildSettingTile(
+                      context,
+                      icon: Icons.air_outlined,
+                      title: 'Respiración',
+                      subtitle: 'Ejercicio de respiración consciente',
+                      onTap: () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (_) => const BreathingScreen(),
                           ),
                         );
                       },

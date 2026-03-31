@@ -201,6 +201,73 @@ class NotificationService {
     print('✅ Recordatorio de racha programado para las 21:00');
   }
 
+  /// Programar resumen semanal cada domingo a las 19:00
+  /// Solo se programa si no se hizo esta semana
+  Future<void> scheduleWeeklySummary() async {
+    const notifId = 998;
+
+    final prefs = await SharedPreferences.getInstance();
+
+    // Calcular ISO week
+    final now = DateTime.now();
+    final weekKey = '${now.year}-W${_isoWeek(now)}';
+    if (prefs.getString('weekly_summary_sent') == weekKey) return;
+
+    // Calcular próximo domingo
+    final daysUntilSunday = DateTime.sunday - now.weekday;
+    final sunday = now.add(Duration(days: daysUntilSunday == 0 ? 7 : daysUntilSunday));
+    final scheduled = tz.TZDateTime(
+      tz.local,
+      sunday.year,
+      sunday.month,
+      sunday.day,
+      19, // 19:00
+    );
+    if (scheduled.isBefore(tz.TZDateTime.now(tz.local))) return;
+
+    // Obtener stats de la semana
+    final db = DatabaseHelper.instance;
+    final stats = await db.getRecentStats(7);
+    final totalViewed = stats.fold<int>(0, (sum, s) => sum + s.quotesViewed);
+    final activeDays = stats.where((s) => s.quotesViewed > 0).length;
+
+    final profile = await db.getUserProfile();
+    final streak = profile?.currentStreak ?? 0;
+    final name = profile?.name ?? 'tú';
+
+    final body = '$activeDays día${activeDays == 1 ? '' : 's'} activo${activeDays == 1 ? '' : 's'}, '
+        '$totalViewed frase${totalViewed == 1 ? '' : 's'} leída${totalViewed == 1 ? '' : 's'}. '
+        '${streak > 0 ? '🔥 Racha actual: $streak días.' : 'Mantén la constancia la próxima semana.'}';
+
+    const androidDetails = AndroidNotificationDetails(
+      'daily_quotes_channel',
+      'Frases Diarias',
+      channelDescription: 'Notificaciones con frases motivacionales',
+      importance: Importance.defaultImportance,
+      priority: Priority.defaultPriority,
+    );
+
+    await _notifications.zonedSchedule(
+      notifId,
+      '📊 Tu semana en Motivation PRO, $name',
+      body,
+      scheduled,
+      const NotificationDetails(android: androidDetails),
+      androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
+      uiLocalNotificationDateInterpretation:
+          UILocalNotificationDateInterpretation.absoluteTime,
+    );
+
+    await prefs.setString('weekly_summary_sent', weekKey);
+    print('✅ Resumen semanal programado para el domingo');
+  }
+
+  int _isoWeek(DateTime date) {
+    final dayOfYear = int.parse(
+        '${date.difference(DateTime(date.year, 1, 1)).inDays + 1}');
+    return ((dayOfYear - date.weekday + 10) / 7).floor();
+  }
+
   /// Cancelar todas las notificaciones programadas
   Future<void> cancelAllNotifications() async {
     await _notifications.cancelAll();

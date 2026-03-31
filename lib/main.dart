@@ -22,6 +22,9 @@ void main() async {
   // Programar notificaciones existentes
   await NotificationScheduler.instance.scheduleAllNotifications();
 
+  // Programar resumen semanal (domingo 19:00)
+  await NotificationService.instance.scheduleWeeklySummary();
+
   // Configurar canal para widget
   WidgetService.setupMethodChannel();
 

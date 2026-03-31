@@ -11,6 +11,7 @@ import '../models/notification_schedule.dart';
 import '../models/reflection.dart';
 import '../models/mood_entry.dart';
 import '../models/affirmation.dart';
+import '../models/habit.dart';
 
 /// Helper para gestionar la base de datos SQLite
 class DatabaseHelper {
@@ -33,7 +34,7 @@ class DatabaseHelper {
 
     return await openDatabase(
       path,
-      version: 4,
+      version: 5,
       onCreate: _createDB,
       onUpgrade: _onUpgrade,
     );
@@ -130,6 +131,20 @@ class DatabaseHelper {
       )
     ''');
 
+    // Tabla de hábitos
+    await db.execute('''
+      CREATE TABLE habits (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        name TEXT NOT NULL,
+        description TEXT,
+        active INTEGER DEFAULT 1,
+        current_streak INTEGER DEFAULT 0,
+        max_streak INTEGER DEFAULT 0,
+        last_completed_date TEXT,
+        created_at TEXT NOT NULL
+      )
+    ''');
+
     print('✅ Tablas creadas correctamente - Versión $version');
   }
 
@@ -176,6 +191,21 @@ class DatabaseHelper {
           id INTEGER PRIMARY KEY AUTOINCREMENT,
           text TEXT NOT NULL,
           active INTEGER DEFAULT 1,
+          created_at TEXT NOT NULL
+        )
+      ''');
+    }
+
+    if (oldVersion < 5) {
+      await db.execute('''
+        CREATE TABLE IF NOT EXISTS habits (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          name TEXT NOT NULL,
+          description TEXT,
+          active INTEGER DEFAULT 1,
+          current_streak INTEGER DEFAULT 0,
+          max_streak INTEGER DEFAULT 0,
+          last_completed_date TEXT,
           created_at TEXT NOT NULL
         )
       ''');
@@ -847,6 +877,41 @@ class DatabaseHelper {
       limit: days,
     );
     return result.map((m) => MoodEntry.fromMap(m)).toList();
+  }
+
+  // ==========================================
+  // OPERACIONES CRUD - HABITS
+  // ==========================================
+
+  Future<int> insertHabit(Habit habit) async {
+    final db = await database;
+    return await db.insert('habits', habit.toMap());
+  }
+
+  Future<List<Habit>> getAllHabits() async {
+    final db = await database;
+    final result = await db.query(
+      'habits',
+      where: 'active = ?',
+      whereArgs: [1],
+      orderBy: 'created_at DESC',
+    );
+    return result.map((m) => Habit.fromMap(m)).toList();
+  }
+
+  Future<int> updateHabit(Habit habit) async {
+    final db = await database;
+    return await db.update(
+      'habits',
+      habit.toMap(),
+      where: 'id = ?',
+      whereArgs: [habit.id],
+    );
+  }
+
+  Future<int> deleteHabit(int id) async {
+    final db = await database;
+    return await db.delete('habits', where: 'id = ?', whereArgs: [id]);
   }
 
   // ==========================================
