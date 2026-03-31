@@ -162,6 +162,27 @@ class QuoteApiService {
     return quotes;
   }
 
+  /// Buscar frases por texto libre en Quotable (hasta 20 resultados por página)
+  Future<List<ApiQuote>> searchQuotesByText(String query, {int page = 1}) async {
+    try {
+      final uri = Uri.parse(
+        '$_quotableBaseUrl/search/quotes?query=${Uri.encodeComponent(query)}&limit=20&page=$page',
+      );
+      final response = await http.get(uri).timeout(const Duration(seconds: 8));
+
+      if (response.statusCode == 200) {
+        final json = jsonDecode(response.body) as Map<String, dynamic>;
+        final results = json['results'] as List<dynamic>;
+        return results
+            .map((item) => ApiQuote.fromQuotable(item as Map<String, dynamic>))
+            .toList();
+      }
+    } catch (e) {
+      print('searchQuotesByText error: $e');
+    }
+    return [];
+  }
+
   /// Buscar frases por categoría/tag (Quotable)
   Future<List<ApiQuote>> searchByTag(String tag) async {
     try {

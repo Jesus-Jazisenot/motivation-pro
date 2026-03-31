@@ -85,36 +85,53 @@ class AiService {
     return await _generateAdvancedLocalQuote(profile);
   }
 
-  /// Generador LOCAL MEJORADO con traducción automática
+  /// Generador LOCAL — frases reales basadas en el tema del usuario
   Future<String> _generateAdvancedLocalQuote(UserProfile profile) async {
     final random = Random();
-    final name = profile.name;
+    final topic = await _translateChallenge(profile);
+    final tone = profile.tonePreference;
 
-    // ⬅️ TRADUCIR RETO ANTES DE USAR
-    final challenge = await _translateChallenge(profile);
+    // Banco de frases reales por tono
+    final energeticQuotes = [
+      'La acción constante sobre $topic convierte la intención en resultado.',
+      'No esperes el momento perfecto para avanzar en $topic. El momento eres tú.',
+      'Cada día que trabajas en $topic eres una versión más difícil de rendirse.',
+      'El que domina $topic no lo hace por motivación. Lo hace por hábito.',
+      'Empiezas en $topic con lo que tienes. Terminas con lo que construiste.',
+    ];
 
-    final structure = random.nextInt(5);
+    final calmQuotes = [
+      'El progreso en $topic no se mide en días, sino en la dirección que eliges.',
+      'La paciencia con $topic no es esperar. Es avanzar sin prisa y sin pausa.',
+      'Cada pequeño paso en $topic deja una huella más profunda que los grandes saltos.',
+      'La serenidad en $topic es la fuerza que los impacientes nunca encuentran.',
+      'No se trata de dominar $topic rápido. Se trata de no abandonarlo.',
+    ];
 
-    switch (structure) {
-      case 0:
-        return _buildFromComponents(
-          _getOpening(name, random),
-          _getMotivation(challenge, random),
-          _getAction(random),
-        );
+    final directQuotes = [
+      'O actúas hoy en $topic, o mañana seguirás en el mismo lugar.',
+      '$topic no se resuelve con intención. Se resuelve con ejecución.',
+      'El tiempo que no dedicas a $topic no regresa. El que dedicas, tampoco.',
+      'Sin compromiso real con $topic, el resto son solo palabras.',
+      'La diferencia en $topic está en lo que haces cuando nadie te obliga.',
+    ];
 
-      case 1:
-        return _buildDirect(name, challenge, random);
+    final balancedQuotes = [
+      'El verdadero avance en $topic ocurre cuando dejas de medir el esfuerzo.',
+      'Construir en $topic exige constancia, no perfección.',
+      'La mejor versión de ti mismo se forja día a día en $topic.',
+      'Lo que inviertes en $topic hoy es interés que cobra el futuro.',
+      'El camino en $topic no siempre es recto. Lo importante es no detenerse.',
+    ];
 
-      case 2:
-        return _buildReflective(name, challenge, random);
+    final pool = switch (tone) {
+      'energetic' => energeticQuotes,
+      'calm'      => calmQuotes,
+      'direct'    => directQuotes,
+      _           => balancedQuotes,
+    };
 
-      case 3:
-        return _buildEnergetic(name, challenge, profile.tonePreference, random);
-
-      default:
-        return _buildToneBased(name, challenge, profile.tonePreference, random);
-    }
+    return pool[random.nextInt(pool.length)];
   }
 
   /// Traducir reto con sistema híbrido
@@ -206,162 +223,6 @@ class AiService {
     return spanishCount > words.length * 0.3;
   }
 
-  // === COMPONENTES MODULARES (sin cambios) ===
-
-  List<String> _getOpenings(String name) => [
-        '$name,',
-        'Hoy es tu día, $name.',
-        'Escucha esto, $name:',
-        '$name, recuerda que',
-        'No lo olvides, $name:',
-        'Piensa en esto, $name:',
-        '$name, ten presente que',
-        'Cada día, $name,',
-        'Aquí va algo importante, $name:',
-        '$name, la verdad es que',
-      ];
-
-  String _getOpening(String name, Random random) {
-    final openings = _getOpenings(name);
-    return openings[random.nextInt(openings.length)];
-  }
-
-  List<String> _getMotivations(String challenge) => [
-        'cada esfuerzo en $challenge cuenta más de lo que crees',
-        'el progreso en $challenge se construye día a día',
-        'tu dedicación a $challenge está transformándote',
-        'cada paso hacia $challenge te define',
-        'la persistencia en $challenge es tu superpoder',
-        'avanzar en $challenge es avanzar en la vida',
-        'tu compromiso con $challenge habla de quién eres',
-        'dominar $challenge es dominar tu futuro',
-        'invertir en $challenge es invertir en ti',
-        'cada momento dedicado a $challenge multiplica tus resultados',
-      ];
-
-  String _getMotivation(String challenge, Random random) {
-    final motivations = _getMotivations(challenge);
-    return motivations[random.nextInt(motivations.length)];
-  }
-
-  List<String> _getActions() => [
-        'Sigue adelante.',
-        'No te detengas.',
-        'Continúa así.',
-        'Mantén el rumbo.',
-        'Persevera.',
-        'Dale con todo.',
-        'Confía en el proceso.',
-        'Cada día cuenta.',
-        'Tú puedes.',
-        'Hazlo realidad.',
-      ];
-
-  String _getAction(Random random) {
-    final actions = _getActions();
-    return actions[random.nextInt(actions.length)];
-  }
-
-  String _buildFromComponents(
-      String opening, String motivation, String action) {
-    return '$opening $motivation. $action';
-  }
-
-  String _buildDirect(String name, String challenge, Random random) {
-    final templates = [
-      '$name, $challenge no es solo una meta, es tu camino hacia quien quieres ser.',
-      'Lo directo, $name: $challenge requiere tu mejor versión hoy.',
-      '$name, cada acción hacia $challenge es una inversión en tu futuro.',
-      'Simple y claro, $name: $challenge se conquista con constancia diaria.',
-      '$name, no subestimes tu poder para dominar $challenge.',
-      '$challenge es tu desafío, $name, pero también tu oportunidad de brillar.',
-      '$name, el tiempo que dedicas a $challenge nunca se pierde.',
-      'Enfócate, $name: $challenge es donde tu esfuerzo se convierte en resultados.',
-    ];
-    return templates[random.nextInt(templates.length)];
-  }
-
-  String _buildReflective(String name, String challenge, Random random) {
-    final templates = [
-      'Reflexiona un momento, $name: $challenge te está moldeando cada día.',
-      '$name, cada pequeño avance en $challenge es un logro que celebrar.',
-      'Tómate un segundo, $name. El progreso en $challenge es más visible de lo que crees.',
-      '$name, respira y reconoce: ya has avanzado mucho en $challenge.',
-      'Mira atrás, $name. Tu dedicación a $challenge te ha traído hasta aquí.',
-      '$name, cada obstáculo en $challenge es una lección disfrazada.',
-      'Piénsalo, $name: $challenge no solo te desafía, te transforma.',
-      '$name, el esfuerzo que pones en $challenge construye más que resultados.',
-    ];
-    return templates[random.nextInt(templates.length)];
-  }
-
-  String _buildEnergetic(
-      String name, String challenge, String tone, Random random) {
-    if (tone == 'energetic') {
-      final templates = [
-        '¡Dale, $name! Hoy es el día perfecto para avanzar en $challenge. ¡Vamos!',
-        '¡Arriba, $name! $challenge es tu momento de demostrar de qué estás hecho.',
-        '¡Vamos, $name! La energía que pones en $challenge transformará tu realidad.',
-        '¡Hoy es el día, $name! $challenge te espera y tú estás más que listo.',
-        '¡A por ello, $name! Cada acción hacia $challenge te acerca a tu meta.',
-        '¡Con todo, $name! $challenge es tu oportunidad de brillar hoy.',
-      ];
-      return templates[random.nextInt(templates.length)];
-    }
-
-    final templates = [
-      '$name, hoy da un paso más en $challenge. Pequeños pasos, grandes resultados.',
-      '$name, mantén el enfoque en $challenge. Tu consistencia marca la diferencia.',
-      'Avanza con confianza, $name. $challenge está a tu alcance.',
-      '$name, cada día dedicado a $challenge te fortalece.',
-    ];
-    return templates[random.nextInt(templates.length)];
-  }
-
-  String _buildToneBased(
-      String name, String challenge, String tone, Random random) {
-    switch (tone) {
-      case 'calm':
-        final templates = [
-          '$name, respira. El progreso en $challenge viene con paciencia.',
-          'Tómate tu tiempo, $name. $challenge se logra con serenidad.',
-          '$name, cada paso tranquilo hacia $challenge es un paso firme.',
-          'Calma, $name. Tu ritmo en $challenge es el correcto para ti.',
-          '$name, la constancia serena en $challenge supera la prisa.',
-        ];
-        return templates[random.nextInt(templates.length)];
-
-      case 'direct':
-        final templates = [
-          '$name: actúa hoy en $challenge. Sin excusas.',
-          '$challenge no se resuelve solo, $name. Tú tienes el control.',
-          'Sin vueltas, $name: $challenge requiere tu acción ahora.',
-          '$name, lo que hagas hoy en $challenge definirá mañana.',
-          'Directo al grano, $name: $challenge espera tu movimiento.',
-        ];
-        return templates[random.nextInt(templates.length)];
-
-      case 'balanced':
-        final templates = [
-          '$name, encuentra el equilibrio. $challenge es importante, pero también tu bienestar.',
-          '$name, avanza en $challenge sin perder de vista lo que realmente importa.',
-          'Balance, $name. $challenge es parte del camino, no todo el camino.',
-          '$name, dedica tiempo a $challenge, pero también a ti.',
-          'Equilibrio, $name: $challenge y tu paz mental van de la mano.',
-        ];
-        return templates[random.nextInt(templates.length)];
-
-      default:
-        final templates = [
-          '$name, cada esfuerzo en $challenge te acerca a tu mejor versión.',
-          '$name, tu dedicación a $challenge está dando frutos.',
-          'Mantén el curso, $name. $challenge es tu camino al crecimiento.',
-          '$name, confía en tu proceso con $challenge.',
-        ];
-        return templates[random.nextInt(templates.length)];
-    }
-  }
-
   Future<String?> generateQuickQuote(String theme) async {
     if (_useAi) {
       try {
@@ -402,27 +263,31 @@ Solo la frase.
   }
 
   String _buildPrompt(UserProfile profile) {
-    final challenges = profile.challenges.isNotEmpty
-        ? profile.challenges
-        : 'superar obstáculos';
+    final topics = profile.challenges.isNotEmpty
+        ? profile.challenges.join(', ')
+        : profile.values.isNotEmpty
+            ? profile.values.join(', ')
+            : 'superación personal';
 
     final tone = _getToneDescription(profile.tonePreference);
 
     return '''
-Genera UNA frase motivacional para ${profile.name}.
+Genera UNA frase motivacional original y poderosa sobre: $topics.
+Tono: $tone.
 
-Contexto:
-- Retos: $challenges
-- Tono: $tone
+Reglas estrictas:
+- Suena como una cita de un filósofo, escritor o pensador reconocido
+- NO menciones nombres de personas
+- NO uses frases genéricas o clichés conocidos
+- Máximo 2 oraciones cortas
+- En español
+- Sin comillas ni signos innecesarios
+- Sin explicaciones, solo la frase
 
-Instrucciones:
-1. Incluir el nombre "${profile.name}"
-2. Mencionar: $challenges
-3. Máximo 3 líneas
-4. Sin comillas
-5. En español
-
-Solo la frase.
+Ejemplos del estilo buscado:
+"La disciplina es la puerta que separa el deseo de la realidad."
+"No buscas motivación. La construyes acción por acción."
+"El progreso silencioso supera siempre al ruido del que nunca empieza."
 ''';
   }
 

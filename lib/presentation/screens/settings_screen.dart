@@ -4,6 +4,7 @@ import '../../core/constants/app_dimensions.dart';
 import 'notification_settings_screen.dart';
 import 'achievements_screen.dart';
 import 'api_settings_screen.dart';
+import 'theme_selector_screen.dart';
 
 class SettingsScreen extends StatelessWidget {
   const SettingsScreen({super.key});
@@ -50,6 +51,22 @@ class SettingsScreen extends StatelessWidget {
                 child: ListView(
                   padding: EdgeInsets.all(AppDimensions.paddingL),
                   children: [
+                    // TEMAS
+                    _buildSettingTile(
+                      context,
+                      icon: Icons.palette_outlined,
+                      title: 'Temas',
+                      subtitle: 'Cambia el aspecto visual de la app',
+                      onTap: () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (_) => const ThemeSelectorScreen(),
+                          ),
+                        );
+                      },
+                    ),
+
                     // NOTIFICACIONES
                     _buildSettingTile(
                       context,

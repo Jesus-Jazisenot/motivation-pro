@@ -1,5 +1,8 @@
 import 'package:flutter/material.dart';
 import '../../core/constants/app_colors.dart';
+import '../../core/services/connectivity_service.dart';
+import '../../core/services/quote_api_service.dart';
+import '../../core/services/translation_service.dart';
 import '../../data/database/database_helper.dart';
 import '../../data/models/quote.dart';
 
@@ -14,9 +17,18 @@ class _SearchScreenState extends State<SearchScreen> {
   final _searchController = TextEditingController();
   List<String> _categories = [];
   String? _selectedCategory;
-  List<Quote> _results = [];
-  bool _isLoading = false;
+
+  // Resultados locales
+  List<Quote> _localResults = [];
+  bool _isLoadingLocal = false;
   bool _hasSearched = false;
+
+  // Resultados de API
+  List<Quote> _apiResults = [];
+  bool _isLoadingApi = false;
+  int _apiPage = 1;
+  bool _hasMoreApi = true;
+  bool _apiSearched = false;
 
   @override
   void initState() {
@@ -40,8 +52,12 @@ class _SearchScreenState extends State<SearchScreen> {
     final category = _selectedCategory;
 
     setState(() {
-      _isLoading = true;
+      _isLoadingLocal = true;
       _hasSearched = true;
+      _apiResults = [];
+      _apiSearched = false;
+      _apiPage = 1;
+      _hasMoreApi = true;
     });
 
     try {
@@ -57,18 +73,114 @@ class _SearchScreenState extends State<SearchScreen> {
         results = await DatabaseHelper.instance.getAllQuotes();
       }
 
-      if (mounted) setState(() => _results = results);
+      if (mounted) setState(() => _localResults = results);
     } finally {
-      if (mounted) setState(() => _isLoading = false);
+      if (mounted) setState(() => _isLoadingLocal = false);
     }
   }
 
-  Future<void> _toggleFavorite(Quote quote) async {
+  Future<void> _searchOnline() async {
+    final query = _searchController.text.trim();
+    if (query.isEmpty) return;
+
+    final hasInternet = await ConnectivityService.instance.hasConnectionLight();
+    if (!hasInternet) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+          content: const Text('Sin conexión a internet'),
+          backgroundColor: AppColors.warning,
+        ));
+      }
+      return;
+    }
+
+    setState(() {
+      _isLoadingApi = true;
+      _apiSearched = true;
+    });
+
+    try {
+      final apiQuotes = await QuoteApiService.instance
+          .searchQuotesByText(query, page: _apiPage);
+
+      if (apiQuotes.isEmpty) {
+        setState(() => _hasMoreApi = false);
+        return;
+      }
+
+      // Traducir y guardar en BD las que no existan ya
+      final newQuotes = <Quote>[];
+      for (final aq in apiQuotes) {
+        try {
+          String text = aq.text;
+          // Traducir si parece inglés (palabras cortas en inglés)
+          if (!_looksSpanish(text)) {
+            final translated =
+                await TranslationService.instance.translateToSpanish(text);
+            if (translated != text) text = translated;
+          }
+
+          final quote = Quote(
+            text: text,
+            author: aq.author,
+            category: aq.category,
+            source: 'api-search',
+            language: text == aq.text ? 'en' : 'es',
+            lastShown: null,
+            viewCount: 0,
+          );
+
+          // Guardar en BD si no existe
+          final existing =
+              await DatabaseHelper.instance.searchQuotes(aq.text);
+          if (existing.isEmpty) {
+            final id = await DatabaseHelper.instance.insertQuote(quote);
+            newQuotes.add(quote.copyWith(id: id));
+          } else {
+            newQuotes.add(existing.first);
+          }
+        } catch (_) {}
+      }
+
+      setState(() {
+        _apiResults.addAll(newQuotes);
+        _apiPage++;
+        if (apiQuotes.length < 20) _hasMoreApi = false;
+      });
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+          content: Text('Error buscando en internet: $e'),
+          backgroundColor: AppColors.error,
+        ));
+      }
+    } finally {
+      if (mounted) setState(() => _isLoadingApi = false);
+    }
+  }
+
+  bool _looksSpanish(String text) {
+    final spanishWords = {
+      'el', 'la', 'los', 'las', 'de', 'que', 'es', 'en', 'y', 'a',
+      'por', 'con', 'para', 'mi', 'tu', 'su', 'más', 'ser', 'hay',
+      'todo', 'como', 'pero', 'muy', 'hacer', 'vida', 'no', 'si',
+    };
+    final words = text.toLowerCase().split(RegExp(r'\W+'));
+    final matches = words.where(spanishWords.contains).length;
+    return matches > words.length * 0.25;
+  }
+
+  Future<void> _toggleFavorite(Quote quote, {bool isApi = false}) async {
     final updated = quote.copyWith(isFavorite: !quote.isFavorite);
     await DatabaseHelper.instance.updateQuote(updated);
     setState(() {
-      final i = _results.indexWhere((q) => q.id == quote.id);
-      if (i != -1) _results[i] = updated;
+      if (isApi) {
+        final i = _apiResults.indexWhere((q) => q.id == quote.id);
+        if (i != -1) _apiResults[i] = updated;
+      } else {
+        final i = _localResults.indexWhere((q) => q.id == quote.id);
+        if (i != -1) _localResults[i] = updated;
+      }
     });
   }
 
@@ -90,7 +202,7 @@ class _SearchScreenState extends State<SearchScreen> {
         child: SafeArea(
           child: Column(
             children: [
-              // Header
+              // Header + controles
               Padding(
                 padding: const EdgeInsets.fromLTRB(24, 16, 24, 12),
                 child: Column(
@@ -117,7 +229,8 @@ class _SearchScreenState extends State<SearchScreen> {
                         onSubmitted: (_) => _search(),
                         decoration: InputDecoration(
                           hintText: 'Buscar por texto o autor...',
-                          hintStyle: TextStyle(color: AppColors.textTertiary),
+                          hintStyle:
+                              TextStyle(color: AppColors.textTertiary),
                           prefixIcon: Icon(Icons.search,
                               color: AppColors.textSecondary),
                           suffixIcon: _searchController.text.isNotEmpty
@@ -148,85 +261,64 @@ class _SearchScreenState extends State<SearchScreen> {
                         child: ListView(
                           scrollDirection: Axis.horizontal,
                           children: [
-                            // Chip "Todas"
-                            Padding(
-                              padding: const EdgeInsets.only(right: 8),
-                              child: FilterChip(
-                                label: const Text('Todas'),
-                                selected: _selectedCategory == null,
-                                onSelected: (_) {
-                                  setState(() => _selectedCategory = null);
-                                  _search();
-                                },
-                                selectedColor:
-                                    AppColors.primary.withOpacity(0.2),
-                                checkmarkColor: AppColors.primary,
-                                labelStyle: TextStyle(
-                                  color: _selectedCategory == null
-                                      ? AppColors.primary
-                                      : AppColors.textSecondary,
-                                  fontSize: 12,
-                                  fontWeight: _selectedCategory == null
-                                      ? FontWeight.bold
-                                      : FontWeight.normal,
-                                ),
-                                backgroundColor: AppColors.surface,
-                                side: BorderSide(color: AppColors.border),
-                                padding: EdgeInsets.zero,
-                              ),
-                            ),
-                            ..._categories.map((cat) => Padding(
-                                  padding: const EdgeInsets.only(right: 8),
-                                  child: FilterChip(
-                                    label: Text(cat),
-                                    selected: _selectedCategory == cat,
-                                    onSelected: (_) {
-                                      setState(() => _selectedCategory =
-                                          _selectedCategory == cat
-                                              ? null
-                                              : cat);
-                                      _search();
-                                    },
-                                    selectedColor:
-                                        AppColors.primary.withOpacity(0.2),
-                                    checkmarkColor: AppColors.primary,
-                                    labelStyle: TextStyle(
-                                      color: _selectedCategory == cat
-                                          ? AppColors.primary
-                                          : AppColors.textSecondary,
-                                      fontSize: 12,
-                                      fontWeight: _selectedCategory == cat
-                                          ? FontWeight.bold
-                                          : FontWeight.normal,
-                                    ),
-                                    backgroundColor: AppColors.surface,
-                                    side: BorderSide(color: AppColors.border),
-                                    padding: EdgeInsets.zero,
-                                  ),
-                                )),
+                            _categoryChip(null, 'Todas'),
+                            ..._categories
+                                .map((c) => _categoryChip(c, c)),
                           ],
                         ),
                       ),
 
                     const SizedBox(height: 10),
 
-                    // Botón buscar
-                    SizedBox(
-                      width: double.infinity,
-                      child: ElevatedButton.icon(
-                        onPressed: _search,
-                        icon: const Icon(Icons.search, size: 18),
-                        label: const Text('Buscar'),
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: AppColors.primary,
-                          foregroundColor: Colors.white,
-                          padding: const EdgeInsets.symmetric(vertical: 12),
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(12),
+                    // Botones de búsqueda
+                    Row(
+                      children: [
+                        Expanded(
+                          child: ElevatedButton.icon(
+                            onPressed: _search,
+                            icon: const Icon(Icons.storage_outlined, size: 16),
+                            label: const Text('Buscar local'),
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: AppColors.primary,
+                              foregroundColor: Colors.white,
+                              padding:
+                                  const EdgeInsets.symmetric(vertical: 11),
+                              shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(12)),
+                              elevation: 0,
+                            ),
                           ),
-                          elevation: 0,
                         ),
-                      ),
+                        const SizedBox(width: 10),
+                        Expanded(
+                          child: ElevatedButton.icon(
+                            onPressed:
+                                _searchController.text.trim().isEmpty ||
+                                        _isLoadingApi
+                                    ? null
+                                    : _searchOnline,
+                            icon: _isLoadingApi
+                                ? const SizedBox(
+                                    width: 14,
+                                    height: 14,
+                                    child: CircularProgressIndicator(
+                                        strokeWidth: 2,
+                                        color: Colors.white),
+                                  )
+                                : const Icon(Icons.public, size: 16),
+                            label: const Text('Buscar online'),
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: AppColors.accent,
+                              foregroundColor: Colors.white,
+                              padding:
+                                  const EdgeInsets.symmetric(vertical: 11),
+                              shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(12)),
+                              elevation: 0,
+                            ),
+                          ),
+                        ),
+                      ],
                     ),
                   ],
                 ),
@@ -234,49 +326,93 @@ class _SearchScreenState extends State<SearchScreen> {
 
               // Resultados
               Expanded(
-                child: _isLoading
+                child: _isLoadingLocal
                     ? Center(
                         child: CircularProgressIndicator(
                             color: AppColors.primary))
                     : !_hasSearched
-                        ? _buildEmptyState(
+                        ? _emptyState(
                             Icons.search,
                             'Busca frases por texto, autor\no filtra por categoría',
                           )
-                        : _results.isEmpty
-                            ? _buildEmptyState(
-                                Icons.sentiment_dissatisfied_outlined,
-                                'Sin resultados\nPrueba con otro término',
-                              )
-                            : Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
+                        : ListView(
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 16, vertical: 4),
+                            children: [
+                              // --- Resultados locales ---
+                              if (_localResults.isNotEmpty) ...[
+                                _sectionHeader(
+                                    '${_localResults.length} resultado${_localResults.length == 1 ? '' : 's'} guardados'),
+                                ..._localResults.map((q) => _QuoteResultTile(
+                                      quote: q,
+                                      onFavoriteToggled: (q) =>
+                                          _toggleFavorite(q),
+                                    )),
+                              ] else if (_hasSearched) ...[
+                                _emptyState(
+                                  Icons.inbox_outlined,
+                                  'Sin resultados locales.\nPrueba "Buscar online" para encontrar más.',
+                                ),
+                              ],
+
+                              // --- Resultados de API ---
+                              if (_apiSearched) ...[
+                                const SizedBox(height: 16),
+                                _sectionHeader('Resultados de internet'),
+                                if (_apiResults.isEmpty && !_isLoadingApi)
                                   Padding(
                                     padding: const EdgeInsets.symmetric(
-                                        horizontal: 24),
-                                    child: Text(
-                                      '${_results.length} ${_results.length == 1 ? 'resultado' : 'resultados'}',
-                                      style: TextStyle(
-                                        color: AppColors.textSecondary,
-                                        fontSize: 13,
+                                        vertical: 16),
+                                    child: Center(
+                                      child: Text(
+                                        'Sin resultados online para ese término',
+                                        style: TextStyle(
+                                            color: AppColors.textSecondary),
                                       ),
                                     ),
                                   ),
-                                  const SizedBox(height: 8),
-                                  Expanded(
-                                    child: ListView.builder(
-                                      padding: const EdgeInsets.symmetric(
-                                          horizontal: 16),
-                                      itemCount: _results.length,
-                                      itemBuilder: (_, i) =>
-                                          _QuoteResultTile(
-                                        quote: _results[i],
-                                        onFavoriteToggled: _toggleFavorite,
+                                ..._apiResults.map((q) => _QuoteResultTile(
+                                      quote: q,
+                                      onFavoriteToggled: (q) =>
+                                          _toggleFavorite(q, isApi: true),
+                                    )),
+                                if (_isLoadingApi)
+                                  Padding(
+                                    padding: const EdgeInsets.all(16),
+                                    child: Center(
+                                      child: CircularProgressIndicator(
+                                          color: AppColors.accent),
+                                    ),
+                                  ),
+                                if (_apiResults.isNotEmpty &&
+                                    _hasMoreApi &&
+                                    !_isLoadingApi)
+                                  Padding(
+                                    padding: const EdgeInsets.symmetric(
+                                        vertical: 8),
+                                    child: Center(
+                                      child: OutlinedButton.icon(
+                                        onPressed: _searchOnline,
+                                        icon: const Icon(Icons.add),
+                                        label: const Text(
+                                            'Cargar más resultados'),
+                                        style: OutlinedButton.styleFrom(
+                                          foregroundColor: AppColors.accent,
+                                          side: BorderSide(
+                                              color: AppColors.accent),
+                                          shape: RoundedRectangleBorder(
+                                            borderRadius:
+                                                BorderRadius.circular(20),
+                                          ),
+                                        ),
                                       ),
                                     ),
                                   ),
-                                ],
-                              ),
+                              ],
+
+                              const SizedBox(height: 24),
+                            ],
+                          ),
               ),
             ],
           ),
@@ -285,25 +421,62 @@ class _SearchScreenState extends State<SearchScreen> {
     );
   }
 
-  Widget _buildEmptyState(IconData icon, String message) {
-    return Center(
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Icon(icon, size: 56, color: AppColors.textTertiary),
-          const SizedBox(height: 16),
-          Text(
-            message,
-            style: TextStyle(color: AppColors.textSecondary, height: 1.6),
-            textAlign: TextAlign.center,
-          ),
-        ],
+  Widget _categoryChip(String? value, String label) {
+    final selected = _selectedCategory == value;
+    return Padding(
+      padding: const EdgeInsets.only(right: 8),
+      child: FilterChip(
+        label: Text(label),
+        selected: selected,
+        onSelected: (_) {
+          setState(() =>
+              _selectedCategory = selected ? null : value);
+          if (_hasSearched) _search();
+        },
+        selectedColor: AppColors.primary.withOpacity(0.2),
+        checkmarkColor: AppColors.primary,
+        labelStyle: TextStyle(
+          color: selected ? AppColors.primary : AppColors.textSecondary,
+          fontSize: 12,
+          fontWeight: selected ? FontWeight.bold : FontWeight.normal,
+        ),
+        backgroundColor: AppColors.surface,
+        side: BorderSide(color: AppColors.border),
+        padding: EdgeInsets.zero,
       ),
     );
   }
+
+  Widget _sectionHeader(String text) => Padding(
+        padding: const EdgeInsets.only(bottom: 8),
+        child: Text(
+          text,
+          style: TextStyle(
+            color: AppColors.textSecondary,
+            fontSize: 13,
+            fontWeight: FontWeight.w600,
+          ),
+        ),
+      );
+
+  Widget _emptyState(IconData icon, String message) => Padding(
+        padding: const EdgeInsets.symmetric(vertical: 40),
+        child: Column(
+          children: [
+            Icon(icon, size: 52, color: AppColors.textTertiary),
+            const SizedBox(height: 14),
+            Text(
+              message,
+              style:
+                  TextStyle(color: AppColors.textSecondary, height: 1.6),
+              textAlign: TextAlign.center,
+            ),
+          ],
+        ),
+      );
 }
 
-// ─── Tile individual de resultado ─────────────────────────────────────────────
+// ─── Tile de resultado ────────────────────────────────────────────────────────
 
 class _QuoteResultTile extends StatelessWidget {
   final Quote quote;
