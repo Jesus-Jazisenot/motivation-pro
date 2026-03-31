@@ -1,9 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:share_plus/share_plus.dart';
+import 'package:screenshot/screenshot.dart';
+import 'package:path_provider/path_provider.dart';
+import 'dart:io';
 import '../../core/constants/app_colors.dart';
 import '../../core/constants/app_dimensions.dart';
 import '../../data/models/quote.dart';
 import '../../data/database/database_helper.dart';
+import '../../core/services/tts_service.dart';
 
 class QuoteCard extends StatefulWidget {
   final Quote quote;
@@ -25,6 +29,9 @@ class _QuoteCardState extends State<QuoteCard>
   late Animation<double> _scaleAnimation;
   late Animation<double> _fadeAnimation;
   bool _isFavorite = false;
+  bool _isSpeaking = false;
+  bool _isSharingImage = false;
+  final ScreenshotController _screenshotController = ScreenshotController();
 
   @override
   void initState() {
@@ -49,8 +56,25 @@ class _QuoteCardState extends State<QuoteCard>
 
   @override
   void dispose() {
+    if (_isSpeaking) TtsService.instance.stop();
     _controller.dispose();
     super.dispose();
+  }
+
+  Future<void> _toggleSpeech() async {
+    final tts = TtsService.instance;
+    if (_isSpeaking) {
+      await tts.stop();
+      setState(() => _isSpeaking = false);
+    } else {
+      setState(() => _isSpeaking = true);
+      final text = widget.quote.author != null
+          ? '${widget.quote.text}. Por ${widget.quote.author}.'
+          : widget.quote.text;
+      await tts.speak(text, onCompleted: () {
+        if (mounted) setState(() => _isSpeaking = false);
+      });
+    }
   }
 
   Future<void> _toggleFavorite() async {
@@ -88,6 +112,28 @@ class _QuoteCardState extends State<QuoteCard>
     Share.share(text);
   }
 
+  Future<void> _shareAsImage() async {
+    if (_isSharingImage) return;
+    setState(() => _isSharingImage = true);
+    try {
+      final image = await _screenshotController.capture(pixelRatio: 2.5);
+      if (image == null) return;
+      final dir = await getTemporaryDirectory();
+      final file = File('${dir.path}/quote_${DateTime.now().millisecondsSinceEpoch}.png');
+      await file.writeAsBytes(image);
+      await Share.shareXFiles(
+        [XFile(file.path)],
+        text: widget.quote.author != null
+            ? '— ${widget.quote.author}'
+            : '',
+      );
+    } catch (e) {
+      print('Error sharing image: $e');
+    } finally {
+      if (mounted) setState(() => _isSharingImage = false);
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return AnimatedBuilder(
@@ -97,7 +143,9 @@ class _QuoteCardState extends State<QuoteCard>
           scale: _scaleAnimation.value,
           child: Opacity(
             opacity: _fadeAnimation.value,
-            child: Container(
+            child: Screenshot(
+              controller: _screenshotController,
+              child: Container(
               margin: EdgeInsets.all(AppDimensions.paddingL),
               constraints: BoxConstraints(
                 maxHeight: MediaQuery.of(context).size.height * 0.65,
@@ -193,6 +241,21 @@ class _QuoteCardState extends State<QuoteCard>
                       spacing: 8,
                       runSpacing: 8,
                       children: [
+                        // Leer en voz alta
+                        IconButton(
+                          onPressed: _toggleSpeech,
+                          icon: Icon(
+                            _isSpeaking
+                                ? Icons.stop_circle_outlined
+                                : Icons.volume_up_outlined,
+                          ),
+                          color: _isSpeaking
+                              ? AppColors.accent
+                              : AppColors.textSecondary,
+                          iconSize: AppDimensions.iconL,
+                          tooltip: _isSpeaking ? 'Detener' : 'Leer en voz alta',
+                        ),
+
                         // Favorito
                         IconButton(
                           onPressed: _toggleFavorite,
@@ -207,12 +270,31 @@ class _QuoteCardState extends State<QuoteCard>
                           iconSize: AppDimensions.iconL,
                         ),
 
-                        // Compartir
+                        // Compartir texto
                         IconButton(
                           onPressed: _shareQuote,
-                          icon: Icon(Icons.share),
+                          icon: const Icon(Icons.share),
                           color: AppColors.textSecondary,
                           iconSize: AppDimensions.iconL,
+                          tooltip: 'Compartir texto',
+                        ),
+
+                        // Compartir como imagen
+                        IconButton(
+                          onPressed: _isSharingImage ? null : _shareAsImage,
+                          icon: _isSharingImage
+                              ? SizedBox(
+                                  width: 20,
+                                  height: 20,
+                                  child: CircularProgressIndicator(
+                                    strokeWidth: 2,
+                                    color: AppColors.primary,
+                                  ),
+                                )
+                              : const Icon(Icons.image_outlined),
+                          color: AppColors.textSecondary,
+                          iconSize: AppDimensions.iconL,
+                          tooltip: 'Compartir como imagen',
                         ),
 
                         // Siguiente frase
@@ -240,6 +322,7 @@ class _QuoteCardState extends State<QuoteCard>
                 ),
               ),
             ),
+            ), // Screenshot
           ),
         );
       },

@@ -6,7 +6,9 @@ import '../models/daily_stats.dart';
 import '../../core/services/quote_api_service.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../../core/services/translation_service.dart';
-import '../../core/services/connectivity_service.dart'; // ⬅️ AGREGAR
+import '../../core/services/connectivity_service.dart';
+import '../models/notification_schedule.dart';
+import '../models/reflection.dart';
 
 /// Helper para gestionar la base de datos SQLite
 class DatabaseHelper {
@@ -29,7 +31,7 @@ class DatabaseHelper {
 
     return await openDatabase(
       path,
-      version: 2,
+      version: 3,
       onCreate: _createDB,
       onUpgrade: _onUpgrade,
     );
@@ -51,6 +53,17 @@ class DatabaseHelper {
         last_shown TEXT,
         view_count INTEGER DEFAULT 0,
         is_favorite INTEGER DEFAULT 0
+      )
+    ''');
+
+    // Tabla de horarios de notificaciones
+    await db.execute('''
+      CREATE TABLE notification_schedules(
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        time TEXT NOT NULL,
+        label TEXT NOT NULL,
+        days TEXT NOT NULL,
+        enabled INTEGER DEFAULT 1
       )
     ''');
 
@@ -83,6 +96,17 @@ class DatabaseHelper {
       )
     ''');
 
+    // Tabla de reflexiones
+    await db.execute('''
+      CREATE TABLE reflections (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        quote_id INTEGER,
+        quote_text TEXT NOT NULL,
+        text TEXT NOT NULL,
+        created_at TEXT NOT NULL
+      )
+    ''');
+
     print('✅ Tablas creadas correctamente - Versión $version');
   }
 
@@ -91,13 +115,27 @@ class DatabaseHelper {
     print('🔄 Actualizando base de datos de v$oldVersion a v$newVersion');
 
     if (oldVersion < 2) {
-      // Borrar tablas antiguas
-      await db.execute('DROP TABLE IF EXISTS user_profile');
-      await db.execute('DROP TABLE IF EXISTS quotes');
-      await db.execute('DROP TABLE IF EXISTS daily_stats');
+      await db.execute('''
+        CREATE TABLE IF NOT EXISTS notification_schedules(
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          time TEXT NOT NULL,
+          label TEXT NOT NULL,
+          days TEXT NOT NULL,
+          enabled INTEGER DEFAULT 1
+        )
+      ''');
+    }
 
-      // Recrear tablas
-      await _createDB(db, newVersion);
+    if (oldVersion < 3) {
+      await db.execute('''
+        CREATE TABLE IF NOT EXISTS reflections (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          quote_id INTEGER,
+          quote_text TEXT NOT NULL,
+          text TEXT NOT NULL,
+          created_at TEXT NOT NULL
+        )
+      ''');
     }
   }
 
@@ -378,9 +416,48 @@ class DatabaseHelper {
   }
 
   // ==========================================
+  // OPERACIONES CRUD - NOTIFICATION SCHEDULES
+  // ==========================================
+
+  /// Insertar horario de notificación
+  Future<int> insertSchedule(NotificationSchedule schedule) async {
+    final db = await database;
+    return await db.insert('notification_schedules', schedule.toMap());
+  }
+
+  /// Obtener todos los horarios
+  Future<List<NotificationSchedule>> getAllSchedules() async {
+    final db = await database;
+    final List<Map<String, dynamic>> maps =
+        await db.query('notification_schedules', orderBy: 'time ASC');
+    return maps.map((map) => NotificationSchedule.fromMap(map)).toList();
+  }
+
+  /// Actualizar horario
+  Future<int> updateSchedule(NotificationSchedule schedule) async {
+    final db = await database;
+    return await db.update(
+      'notification_schedules',
+      schedule.toMap(),
+      where: 'id = ?',
+      whereArgs: [schedule.id],
+    );
+  }
+
+  /// Eliminar horario
+  Future<int> deleteSchedule(int id) async {
+    final db = await database;
+    return await db.delete(
+      'notification_schedules',
+      where: 'id = ?',
+      whereArgs: [id],
+    );
+  }
+
+  // ==========================================
   // MÉTODOS HÍBRIDOS Y TRADUCCIÓN
   // ==========================================
-  /// Obtener frase híbrida con filtro de idioma Y traducción automática
+
   /// Obtener frase híbrida con filtro de idioma Y traducción automática
   Future<Quote?> getHybridQuote() async {
     try {
@@ -396,7 +473,7 @@ class DatabaseHelper {
         return await getRandomQuote();
       }
 
-      // ⬅️ NUEVO: Verificar conexión ANTES de intentar APIs
+      // Verificar conexión ANTES de intentar APIs
       final connectivityService = ConnectivityService.instance;
       final hasInternet = await connectivityService.hasConnection();
 
@@ -405,32 +482,29 @@ class DatabaseHelper {
         return await getRandomQuote();
       }
 
-      // Resto del código sigue igual...
       final db = await database;
       final apiService = QuoteApiService.instance;
       const maxAttempts = 10;
 
       // INTENTAR OBTENER FRASE NUEVA DE API
       for (int attempt = 1; attempt <= maxAttempts; attempt++) {
-        // ... resto del código existente
         print('🔄 Intento $attempt de $maxAttempts');
 
         Quote? quote;
         try {
-          final apiQuote = await apiService
-              .getRandomQuote()
-              .timeout(Duration(seconds: 5));
+          final apiQuote =
+              await apiService.getRandomQuote().timeout(Duration(seconds: 5));
 
           if (apiQuote != null) {
             quote = apiService.apiQuoteToQuote(apiQuote);
             print('📡 Frase obtenida de API (inglés)');
           } else {
             print('⚠️ API retornó null');
-            continue; // Intentar de nuevo
+            continue;
           }
         } catch (e) {
           print('API error en intento $attempt: $e');
-          continue; // Intentar de nuevo
+          continue;
         }
 
         if (quote == null) continue;
@@ -454,7 +528,7 @@ class DatabaseHelper {
 
           if (existing.isNotEmpty) {
             print('⚠️ Traducción ya existe, intento $attempt');
-            continue; // Intentar con otra frase de API
+            continue;
           }
 
           // Crear nueva frase traducida
@@ -475,7 +549,7 @@ class DatabaseHelper {
             print('Error guardando: $e');
           }
 
-          return translatedQuote; // Éxito - retornar
+          return translatedQuote;
         }
 
         // 2. Usuario quiere SOLO INGLÉS
@@ -491,7 +565,7 @@ class DatabaseHelper {
 
           if (existing.isNotEmpty) {
             print('⚠️ Frase ya existe, intento $attempt');
-            continue; // Intentar con otra frase de API
+            continue;
           }
 
           // Marcar como inglés
@@ -504,7 +578,7 @@ class DatabaseHelper {
             print('Error guardando: $e');
           }
 
-          return englishQuote; // Éxito - retornar
+          return englishQuote;
         }
 
         // 3. Usuario quiere AMBOS
@@ -529,7 +603,7 @@ class DatabaseHelper {
 
             if (existing.isNotEmpty) {
               print('⚠️ Ya existe, intento $attempt');
-              continue; // Intentar de nuevo
+              continue;
             }
 
             final translatedQuote = Quote(
@@ -562,7 +636,7 @@ class DatabaseHelper {
 
             if (existing.isNotEmpty) {
               print('⚠️ Ya existe, intento $attempt');
-              continue; // Intentar de nuevo
+              continue;
             }
 
             final englishQuote = quote.copyWith(language: 'en');
@@ -579,13 +653,126 @@ class DatabaseHelper {
         }
       }
 
-      // Si después de 3 intentos no encontró nada nuevo, usar local
+      // Si después de intentos no encontró nada nuevo, usar local
       print('⚠️ Después de $maxAttempts intentos, usando frases locales');
       return await getRandomQuote();
     } catch (e) {
       print('🚨 Error en hybrid: $e');
       return await getRandomQuote();
     }
+  }
+
+  // ==========================================
+  // FRASE DEL DÍA
+  // ==========================================
+
+  /// Devuelve la misma frase todo el día; cambia a medianoche
+  Future<Quote?> getDailyQuote() async {
+    final prefs = await SharedPreferences.getInstance();
+    final today =
+        '${DateTime.now().year}-${DateTime.now().month.toString().padLeft(2, '0')}-${DateTime.now().day.toString().padLeft(2, '0')}';
+    final savedDate = prefs.getString('daily_quote_date');
+    final savedId = prefs.getInt('daily_quote_id');
+
+    if (savedDate == today && savedId != null) {
+      final quote = await getQuoteById(savedId);
+      if (quote != null) return quote;
+    }
+
+    final quote = await getRandomQuote();
+    if (quote?.id != null) {
+      await prefs.setString('daily_quote_date', today);
+      await prefs.setInt('daily_quote_id', quote!.id!);
+    }
+    return quote;
+  }
+
+  // ==========================================
+  // BÚSQUEDA Y FILTRADO
+  // ==========================================
+
+  /// Buscar frases por texto o autor
+  Future<List<Quote>> searchQuotes(String query) async {
+    final db = await database;
+    final result = await db.rawQuery('''
+      SELECT * FROM quotes
+      WHERE text LIKE ? OR author LIKE ?
+      ORDER BY view_count DESC
+      LIMIT 50
+    ''', ['%$query%', '%$query%']);
+    return result.map((map) => Quote.fromMap(map)).toList();
+  }
+
+  /// Obtener frases por categoría
+  Future<List<Quote>> getQuotesByCategory(String category) async {
+    final db = await database;
+    final result = await db.query(
+      'quotes',
+      where: 'category = ?',
+      whereArgs: [category],
+      orderBy: 'view_count DESC',
+      limit: 50,
+    );
+    return result.map((map) => Quote.fromMap(map)).toList();
+  }
+
+  /// Obtener todas las categorías distintas
+  Future<List<String>> getCategories() async {
+    final db = await database;
+    final result = await db.rawQuery(
+      'SELECT DISTINCT category FROM quotes ORDER BY category ASC',
+    );
+    return result.map((row) => row['category'] as String).toList();
+  }
+
+  // ==========================================
+  // OPERACIONES CRUD - REFLEXIONES
+  // ==========================================
+
+  Future<int> insertReflection(Reflection reflection) async {
+    final db = await database;
+    final id = await db.insert('reflections', reflection.toMap());
+
+    // Actualizar contador en daily_stats
+    final today = DateTime.now();
+    var stats = await getDailyStats(today);
+    if (stats == null) {
+      stats = DailyStats(date: today, reflectionsWritten: 1);
+    } else {
+      stats = stats.copyWith(
+          reflectionsWritten: stats.reflectionsWritten + 1);
+    }
+    await upsertDailyStats(stats);
+
+    return id;
+  }
+
+  Future<List<Reflection>> getAllReflections() async {
+    final db = await database;
+    final result = await db.query(
+      'reflections',
+      orderBy: 'created_at DESC',
+    );
+    return result.map((map) => Reflection.fromMap(map)).toList();
+  }
+
+  Future<Reflection?> getReflectionForDate(DateTime date) async {
+    final db = await database;
+    final dateStr =
+        '${date.year}-${date.month.toString().padLeft(2, '0')}-${date.day.toString().padLeft(2, '0')}';
+    final result = await db.rawQuery('''
+      SELECT * FROM reflections
+      WHERE created_at LIKE ?
+      ORDER BY created_at DESC
+      LIMIT 1
+    ''', ['$dateStr%']);
+    if (result.isNotEmpty) return Reflection.fromMap(result.first);
+    return null;
+  }
+
+  Future<int> deleteReflection(int id) async {
+    final db = await database;
+    return await db.delete('reflections', where: 'id = ?', whereArgs: [id]);
   }
 
   /// Cargar frases iniciales si la BD está vacía

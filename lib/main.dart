@@ -2,17 +2,25 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'presentation/screens/splash_screen.dart';
 import 'core/services/notification_service.dart';
+import 'core/services/notification_scheduler.dart';
 import 'core/services/ai_service.dart';
+import 'core/services/tts_service.dart';
 import 'core/services/widget_service.dart';
 import 'data/database/database_helper.dart';
 import 'data/models/quote.dart';
-import 'core/theme/theme_service.dart'; // ⬅️ NUEVO IMPORT
+import 'core/theme/theme_service.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
   // Inicializar servicio de notificaciones
   await NotificationService.instance.initialize();
+
+  // Inicializar NotificationScheduler
+  await NotificationScheduler.instance.initialize();
+
+  // Programar notificaciones existentes
+  await NotificationScheduler.instance.scheduleAllNotifications();
 
   // Configurar canal para widget
   WidgetService.setupMethodChannel();
@@ -29,7 +37,10 @@ void main() async {
   // Inicializar servicio de IA
   AiService.instance.initialize();
 
-  // ⬅️ NUEVO: Inicializar servicio de temas
+  // Inicializar Text-to-Speech
+  await TtsService.instance.initialize();
+
+  // Inicializar servicio de temas
   await ThemeService.instance.initialize();
 
   // Configurar estilo de la barra de estado
@@ -43,7 +54,6 @@ void main() async {
   runApp(const MyApp());
 }
 
-// ⬅️ CAMBIAR A StatefulWidget
 class MyApp extends StatefulWidget {
   const MyApp({super.key});
 
@@ -55,7 +65,6 @@ class _MyAppState extends State<MyApp> {
   @override
   void initState() {
     super.initState();
-    // ⬅️ Escuchar cambios de tema
     ThemeService.instance.addListener(_onThemeChanged);
   }
 
@@ -75,18 +84,16 @@ class _MyAppState extends State<MyApp> {
 
     return MaterialApp(
       title: 'Motivation PRO',
-      theme: themeService.currentTheme.toThemeData(), // ⬅️ TEMA DINÁMICO
+      theme: themeService.currentTheme.toThemeData(),
       home: const SplashScreen(),
       debugShowCheckedModeBanner: false,
     );
   }
 }
 
-/// Cargar frases iniciales en la base de datos
 Future<void> _loadInitialQuotes() async {
   final db = DatabaseHelper.instance;
 
-  // Verificar si ya hay frases
   final existingQuotes = await db.getAllQuotes();
   if (existingQuotes.isNotEmpty) {
     print('✅ Base de datos ya tiene ${existingQuotes.length} frases');
@@ -95,7 +102,6 @@ Future<void> _loadInitialQuotes() async {
 
   print('📚 Cargando frases iniciales...');
 
-  // Frases iniciales en español
   final initialQuotes = [
     Quote(
       text: 'El éxito es la suma de pequeños esfuerzos repetidos día tras día.',
@@ -135,7 +141,6 @@ Future<void> _loadInitialQuotes() async {
     ),
   ];
 
-  // Insertar frases
   for (final quote in initialQuotes) {
     try {
       await db.insertQuote(quote);

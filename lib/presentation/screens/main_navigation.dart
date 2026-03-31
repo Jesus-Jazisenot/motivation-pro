@@ -3,6 +3,7 @@ import '../../core/constants/app_colors.dart';
 import 'home_screen.dart';
 import 'favorites_screen.dart';
 import 'stats_screen.dart';
+import 'search_screen.dart';
 
 class MainNavigation extends StatefulWidget {
   const MainNavigation({super.key});
@@ -17,6 +18,7 @@ class _MainNavigationState extends State<MainNavigation> {
   final List<Widget> _screens = const [
     HomeScreen(),
     FavoritesScreen(),
+    SearchScreen(),
     StatsScreen(),
   ];
 
@@ -61,6 +63,11 @@ class _MainNavigationState extends State<MainNavigation> {
               icon: Icon(Icons.favorite_border),
               activeIcon: Icon(Icons.favorite),
               label: 'Favoritas',
+            ),
+            BottomNavigationBarItem(
+              icon: Icon(Icons.search_outlined),
+              activeIcon: Icon(Icons.search),
+              label: 'Buscar',
             ),
             BottomNavigationBarItem(
               icon: Icon(Icons.bar_chart_outlined),

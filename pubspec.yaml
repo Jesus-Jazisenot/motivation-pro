@@ -60,6 +60,15 @@ dependencies:
   # Fechas
   intl: ^0.18.1
 
+  # Text-to-Speech
+  flutter_tts: ^4.2.0
+
+  # Compartir como imagen
+  screenshot: ^2.3.0
+
+  android_alarm_manager_plus: ^4.0.3
+  #permission_handler: ^11.3.1
+
 dev_dependencies:
   flutter_test:
     sdk: flutter

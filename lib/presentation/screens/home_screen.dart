@@ -14,6 +14,10 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'dart:math';
 import '../../core/services/connectivity_service.dart';
 import '../../core/services/ai_service.dart';
+import '../../core/services/notification_service.dart';
+import '../widgets/streak_indicator.dart';
+import '../widgets/daily_challenge_card.dart';
+import 'reflection_screen.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -81,10 +85,16 @@ class _HomeScreenState extends State<HomeScreen> {
         _userName = profile.name;
         _userProfile = profile;
         print('🔵 LOAD DATA: Perfil cargado - $_userName');
+
+        // Programar recordatorio de racha si tiene racha activa
+        if (profile.currentStreak > 0) {
+          NotificationService.instance
+              .scheduleStreakReminder(profile.currentStreak);
+        }
       }
 
-      // Cargar frase aleatoria
-      await _loadRandomQuote();
+      // Cargar frase del día (misma todo el día)
+      await _loadDailyQuote();
 
       print('🔵 LOAD DATA: Frase cargada');
     } catch (e) {
@@ -108,6 +118,25 @@ class _HomeScreenState extends State<HomeScreen> {
       setState(() {
         _hasInternet = hasConnection;
       });
+    }
+  }
+
+  Future<void> _loadDailyQuote() async {
+    try {
+      final quote = await DatabaseHelper.instance.getDailyQuote();
+      if (quote != null && mounted) {
+        setState(() => _currentQuote = quote);
+        await DatabaseHelper.instance.updateQuote(
+          quote.copyWith(
+            lastShown: DateTime.now(),
+            viewCount: quote.viewCount + 1,
+          ),
+        );
+        await _saveLastQuoteForWidget(quote);
+      }
+    } catch (e) {
+      print('🚨 Error en _loadDailyQuote: $e');
+      await _loadRandomQuote();
     }
   }
 
@@ -695,15 +724,26 @@ class _HomeScreenState extends State<HomeScreen> {
                                   style:
                                       Theme.of(context).textTheme.headlineSmall,
                                 ),
-                                SizedBox(height: 4),
-                                Text(
-                                  AppStrings.homeQuoteOfDay,
-                                  style: Theme.of(context)
-                                      .textTheme
-                                      .bodyMedium
-                                      ?.copyWith(
-                                        color: AppColors.textSecondary,
-                                      ),
+                                SizedBox(height: 6),
+                                Row(
+                                  children: [
+                                    Text(
+                                      AppStrings.homeQuoteOfDay,
+                                      style: Theme.of(context)
+                                          .textTheme
+                                          .bodyMedium
+                                          ?.copyWith(
+                                            color: AppColors.textSecondary,
+                                          ),
+                                    ),
+                                    if (_userProfile != null &&
+                                        _userProfile!.currentStreak > 0) ...[
+                                      SizedBox(width: 10),
+                                      StreakIndicator(
+                                          streak:
+                                              _userProfile!.currentStreak),
+                                    ],
+                                  ],
                                 ),
                               ],
                             ),
@@ -734,7 +774,12 @@ class _HomeScreenState extends State<HomeScreen> {
                         ),
                       ),
 
-                    SizedBox(height: 16),
+                    const SizedBox(height: 8),
+
+                    // Desafío del día
+                    const DailyChallengeCard(),
+
+                    const SizedBox(height: 8),
 
                     // Quote Card o Pantalla de Emergencia
                     Expanded(
@@ -752,37 +797,74 @@ class _HomeScreenState extends State<HomeScreen> {
                                     ),
                                   ),
 
-                                  // Botón de IA
+                                  // Botones de acción
                                   Padding(
-                                    padding: EdgeInsets.symmetric(
+                                    padding: const EdgeInsets.symmetric(
                                       horizontal: 24,
                                       vertical: 8,
                                     ),
-                                    child: ElevatedButton.icon(
-                                      onPressed: _generateAiQuote,
-                                      icon: Icon(
-                                        Icons.auto_awesome,
-                                        size: 20,
-                                      ),
-                                      label: const Text(
-                                        'Generar con IA',
-                                        style: TextStyle(
-                                          fontWeight: FontWeight.bold,
+                                    child: Row(
+                                      children: [
+                                        // Botón IA
+                                        Expanded(
+                                          child: ElevatedButton.icon(
+                                            onPressed: _generateAiQuote,
+                                            icon: const Icon(
+                                                Icons.auto_awesome,
+                                                size: 18),
+                                            label: const Text(
+                                              'Generar con IA',
+                                              style: TextStyle(
+                                                  fontWeight: FontWeight.bold),
+                                            ),
+                                            style: ElevatedButton.styleFrom(
+                                              backgroundColor: AppColors.accent,
+                                              foregroundColor: Colors.white,
+                                              padding:
+                                                  const EdgeInsets.symmetric(
+                                                      vertical: 14),
+                                              shape: RoundedRectangleBorder(
+                                                borderRadius:
+                                                    BorderRadius.circular(24),
+                                              ),
+                                              elevation: 6,
+                                            ),
+                                          ),
                                         ),
-                                      ),
-                                      style: ElevatedButton.styleFrom(
-                                        backgroundColor: AppColors.accent,
-                                        foregroundColor: Colors.white,
-                                        padding: EdgeInsets.symmetric(
-                                          horizontal: 24,
-                                          vertical: 14,
+                                        const SizedBox(width: 10),
+                                        // Botón Reflexionar
+                                        ElevatedButton.icon(
+                                          onPressed: _currentQuote == null
+                                              ? null
+                                              : () => Navigator.push(
+                                                    context,
+                                                    MaterialPageRoute(
+                                                      builder: (_) =>
+                                                          ReflectionScreen(
+                                                              quote:
+                                                                  _currentQuote!),
+                                                    ),
+                                                  ),
+                                          icon: const Icon(
+                                              Icons.edit_note_outlined,
+                                              size: 18),
+                                          label: const Text('Reflexionar'),
+                                          style: ElevatedButton.styleFrom(
+                                            backgroundColor: AppColors.surface,
+                                            foregroundColor: AppColors.primary,
+                                            padding: const EdgeInsets.symmetric(
+                                                vertical: 14, horizontal: 16),
+                                            shape: RoundedRectangleBorder(
+                                              borderRadius:
+                                                  BorderRadius.circular(24),
+                                              side: BorderSide(
+                                                  color: AppColors.primary
+                                                      .withOpacity(0.4)),
+                                            ),
+                                            elevation: 0,
+                                          ),
                                         ),
-                                        shape: RoundedRectangleBorder(
-                                          borderRadius:
-                                              BorderRadius.circular(24),
-                                        ),
-                                        elevation: 6,
-                                      ),
+                                      ],
                                     ),
                                   ),
                                 ],

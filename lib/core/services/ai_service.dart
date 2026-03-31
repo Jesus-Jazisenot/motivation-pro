@@ -49,10 +49,10 @@ class AiService {
   void initialize() {
     try {
       _model = GenerativeModel(
-        model: 'gemini-pro',
+        model: 'gemini-1.5-flash',
         apiKey: _apiKey,
       );
-      print('✅ Servicio de IA inicializado (Gemini Pro)');
+      print('✅ Servicio de IA inicializado (Gemini 1.5 Flash - Gratis)');
     } catch (e) {
       print('⚠️ Error inicializando IA, usando modo fallback: $e');
       _useAi = false;
@@ -456,6 +456,55 @@ Solo la frase.
     cleaned = cleaned.replaceAll('\n\n\n', '\n\n');
 
     return cleaned.trim();
+  }
+
+  /// Genera un micro-desafío del día basado en el perfil del usuario
+  Future<String> generateDailyChallenge(UserProfile profile) async {
+    if (_useAi) {
+      try {
+        final challenge = profile.challenges.isNotEmpty
+            ? profile.challenges.first
+            : 'mejorar personalmente';
+        final prompt = '''
+Genera UN micro-desafío concreto y alcanzable para hoy relacionado con: $challenge.
+El desafío es para ${profile.name}, con tono ${_getToneDescription(profile.tonePreference)}.
+Requisitos:
+- Una sola acción concreta (máximo 15 palabras)
+- Alcanzable en el día de hoy
+- Sin emojis
+- Solo el texto del desafío, sin explicaciones
+
+Ejemplo: "Dedica 10 minutos a leer sobre tu tema de interés antes de dormir."
+''';
+        final response = await _model
+            .generateContent([Content.text(prompt)]).timeout(
+          const Duration(seconds: 12),
+        );
+        if (response.text != null && response.text!.isNotEmpty) {
+          return _cleanQuote(response.text!);
+        }
+      } catch (e) {
+        print('⚠️ IA falló para desafío, usando local: $e');
+      }
+    }
+    return _localDailyChallenge(profile);
+  }
+
+  String _localDailyChallenge(UserProfile profile) {
+    final random = Random();
+    final challenge = profile.challenges.isNotEmpty
+        ? profile.challenges.first
+        : 'tus metas';
+    final name = profile.name;
+    final templates = [
+      'Dedica 15 minutos hoy a avanzar en $challenge, $name.',
+      '$name, escribe 3 cosas que puedes hacer hoy para mejorar en $challenge.',
+      'Haz una sola acción pequeña relacionada con $challenge antes de que termine el día.',
+      '$name, comparte tu progreso en $challenge con alguien de confianza hoy.',
+      'Identifica el mayor obstáculo en $challenge y escribe cómo superarlo.',
+      'Dedica tiempo de calidad, sin distracciones, a $challenge por 20 minutos.',
+    ];
+    return templates[random.nextInt(templates.length)];
   }
 
   Future<bool> isAvailable() async {
