@@ -64,7 +64,7 @@ dependencies:
   flutter_tts: ^4.2.0
 
   # Compartir como imagen
-  screenshot: ^2.3.0
+  screenshot: ^3.0.0
 
   android_alarm_manager_plus: ^4.0.3
   #permission_handler: ^11.3.1
