@@ -5,6 +5,7 @@ import 'notification_settings_screen.dart';
 import 'achievements_screen.dart';
 import 'api_settings_screen.dart';
 import 'theme_selector_screen.dart';
+import 'affirmations_screen.dart';
 
 class SettingsScreen extends StatelessWidget {
   const SettingsScreen({super.key});
@@ -110,6 +111,22 @@ class SettingsScreen extends StatelessWidget {
                           context,
                           MaterialPageRoute(
                             builder: (_) => const ApiSettingsScreen(),
+                          ),
+                        );
+                      },
+                    ),
+
+                    // AFIRMACIONES
+                    _buildSettingTile(
+                      context,
+                      icon: Icons.self_improvement,
+                      title: 'Afirmaciones',
+                      subtitle: 'Crea tus afirmaciones personales positivas',
+                      onTap: () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (_) => const AffirmationsScreen(),
                           ),
                         );
                       },

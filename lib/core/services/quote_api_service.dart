@@ -2,15 +2,11 @@ import 'dart:convert';
 import 'package:http/http.dart' as http;
 import '../../data/models/api_quote.dart';
 import '../../data/models/quote.dart';
-import 'dart:io'; // ⬅️ AGREGAR LÍNEA
 
 class QuoteApiService {
   static final QuoteApiService instance = QuoteApiService._init();
 
-  QuoteApiService._init() {
-    // SOLO DESARROLLO - Ignorar SSL
-    HttpOverrides.global = _DevelopmentHttpOverrides();
-  }
+  QuoteApiService._init();
 
   // Quotable API
   static const _quotableBaseUrl = 'https://api.quotable.io';
@@ -238,17 +234,5 @@ class QuoteApiService {
     }
 
     return false;
-  }
-}
-
-// SOLO DESARROLLO - Remover antes de producción
-class _DevelopmentHttpOverrides extends HttpOverrides {
-  @override
-  HttpClient createHttpClient(SecurityContext? context) {
-    return super.createHttpClient(context)
-      ..badCertificateCallback = (X509Certificate cert, String host, int port) {
-        print('⚠️ SSL bypass para desarrollo: $host');
-        return true;
-      };
   }
 }

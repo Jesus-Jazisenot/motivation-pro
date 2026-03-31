@@ -13,35 +13,41 @@
 ## Roadmap de Features
 
 ### Implementadas ✅
-- Base de datos SQLite con versionado y migraciones
+- Base de datos SQLite con versionado y migraciones (v4)
 - Perfiles de usuario con personalización (tono, valores, retos)
 - Sistema de frases: local + 3 APIs externas (ZenQuotes, Quotable, Type.fit)
 - Favoritos / bookmarks
 - Estadísticas, streaks y sistema de XP/niveles
 - Badges/logros (gamificación)
 - Notificaciones locales + programadas via AlarmManager
+- Recordatorio de racha a las 21:00 (si racha > 0)
 - Sistema de temas con persistencia
 - Widget de pantalla de inicio (Android)
 - Generación de frases con IA (Gemini API, fallback local)
 - Soporte bilingüe español/inglés con traducción automática
 - Detección de conectividad con degradación elegante
-- Compartir frases (share_plus)
-- UI de ajustes (tema, notificaciones, API, about)
-
-### En desarrollo 🔄
-- NotificationScheduler (AlarmManager integration) — archivos nuevos sin commitear
-- Mejoras en comunicación del widget
-- Confiabilidad de conexión
+- Compartir frases (share_plus) + compartir como imagen (screenshot)
+- Leer frase en voz alta (flutter_tts, es-ES)
+- Búsqueda local + búsqueda online paginada (Quotable)
+- Diario de reflexión personal por frase
+- Frase del día (misma todo el día)
+- Desafío diario con IA + +20 XP
+- Streak indicator en header
+- Rastreador de estado de ánimo diario (emojis 1-5)
+- Afirmaciones personales (crear/activar/eliminar)
+- In-app review (se pide al llegar a racha ≥ 3 días)
+- UI de ajustes (tema, notificaciones, API, afirmaciones, logros)
+- Seguridad: API key en ApiKeys + --dart-define, SSL producción limpio
 
 ### Pendientes / Planificadas ❌
-- Diario de reflexión personal
-- Audio y Text-to-Speech
-- Generador de imágenes motivacionales
+- Resumen semanal (notificación dominical con stats)
+- Hábitos tracker (convertir desafíos en hábitos con racha propia)
+- Audio y generador de imágenes motivacionales
 - Análisis y estadísticas avanzadas
-- Sincronización con backend / nube
+- Sincronización con backend / nube (Google Drive backup)
 - Soporte iOS
-- Deep links
-- Backup/restore
+- Freemium / suscripción Pro
+- Ejercicio de respiración visual
 
 ---
 
@@ -75,13 +81,16 @@ lib/
 │   │   ├── user_profile.dart        # Perfil + gamificación
 │   │   ├── api_quote.dart           # DTO para APIs externas
 │   │   ├── daily_stats.dart         # Métricas diarias
-│   │   └── notification_schedule.dart  # NUEVO
+│   │   ├── notification_schedule.dart
+│   │   ├── reflection.dart          # Diario de reflexión
+│   │   ├── mood_entry.dart          # Estado de ánimo diario (1-5)
+│   │   └── affirmation.dart         # Afirmaciones personales
 │   └── database/
-│       └── database_helper.dart     # Singleton SQLite, toda la capa de datos
+│       └── database_helper.dart     # Singleton SQLite v4, toda la capa de datos
 └── presentation/
     ├── screens/
     │   ├── splash_screen.dart
-    │   ├── main_navigation.dart     # Bottom nav (Home/Favoritos/Stats/Logros/Config)
+    │   ├── main_navigation.dart     # Bottom nav (Home/Buscar/Favoritos/Stats/Config)
     │   ├── home_screen.dart
     │   ├── favorites_screen.dart
     │   ├── stats_screen.dart
@@ -90,12 +99,18 @@ lib/
     │   ├── api_settings_screen.dart
     │   ├── notification_settings_screen.dart
     │   ├── theme_selector_screen.dart
+    │   ├── search_screen.dart       # Búsqueda local + online paginada
+    │   ├── reflection_screen.dart   # Diario + lista de reflexiones
+    │   ├── affirmations_screen.dart # Afirmaciones personales (CRUD)
     │   └── onboarding/
-    │       └── onboarding_screen.dart  # 5 pasos: nombre, retos, tiempos, valores, tono
+    │       └── onboarding_screen.dart
     └── widgets/
-        ├── quote_card.dart          # Tarjeta animada de frase
-        ├── xp_bar.dart              # Barra de progreso XP
-        └── level_up_dialog.dart     # Modal confetti al subir nivel
+        ├── quote_card.dart          # Tarjeta animada + TTS + compartir imagen
+        ├── xp_bar.dart
+        ├── level_up_dialog.dart
+        ├── streak_indicator.dart    # Badge 🔥 en header
+        ├── daily_challenge_card.dart # Desafío diario con IA
+        └── mood_picker_widget.dart  # Selector de ánimo diario (emoji 1-5)
 ```
 
 ---
@@ -116,6 +131,9 @@ lib/
 | Traducción | translator |
 | Conectividad | connectivity_plus |
 | Animaciones | confetti + Flutter animaciones nativas |
+| TTS | flutter_tts (es-ES, rate 0.48) |
+| Captura imagen | screenshot ^3.0.0 |
+| In-app review | in_app_review ^2.0.9 |
 
 ---
 
@@ -169,6 +187,32 @@ lib/
 | categories_viewed | TEXT | CSV |
 | reflections_written | INTEGER | |
 
+### `reflections` (DB v3)
+| Campo | Tipo | Notas |
+|-------|------|-------|
+| id | INTEGER PK | |
+| quote_id | INTEGER | FK a quotes |
+| quote_text | TEXT NOT NULL | Copia del texto |
+| text | TEXT NOT NULL | Reflexión del usuario |
+| created_at | TEXT | ISO datetime |
+
+### `moods` (DB v4)
+| Campo | Tipo | Notas |
+|-------|------|-------|
+| id | INTEGER PK | |
+| mood | INTEGER NOT NULL | 1=😔 2=😐 3=🙂 4=😊 5=🤩 |
+| note | TEXT | Nota opcional |
+| quote_id | INTEGER | Frase del día asociada |
+| created_at | TEXT | ISO datetime |
+
+### `affirmations` (DB v4)
+| Campo | Tipo | Notas |
+|-------|------|-------|
+| id | INTEGER PK | |
+| text | TEXT NOT NULL | Máx 200 chars |
+| active | INTEGER | 0/1 |
+| created_at | TEXT | ISO datetime |
+
 ---
 
 ## Patrones de Código
@@ -200,12 +244,15 @@ lib/
 
 ## Issues de Seguridad Conocidos
 
-> ⚠️ **NO mergear a producción sin resolver:**
+> ✅ Resueltos recientemente:
 
-1. **API Key expuesta** — Clave Gemini hardcodeada en `ai_service.dart:11`. Mover a variables de entorno o flutter_secure_storage.
-2. **SSL bypass activo** — `quote_api_service.dart` tiene `HttpOverrides` que omite verificación SSL. Marcado "solo desarrollo" pero debe removerse antes de release.
+1. **API Key** — ✅ Movida a `lib/core/constants/api_keys.dart` con soporte `--dart-define=GEMINI_KEY=...` para CI/CD. El default sigue siendo el key de desarrollo.
+2. **SSL bypass** — ✅ Eliminado `_DevelopmentHttpOverrides` de `quote_api_service.dart`.
+
+> ⚠️ Pendientes antes de producción:
+
 3. **Sin validación de input** — campos de usuario (retos, valores) no son sanitizados.
-4. **SQLite sin cifrado** — datos personales en texto plano.
+4. **SQLite sin cifrado** — datos personales en texto plano (reflections, user_profile).
 
 ---
 

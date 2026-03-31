@@ -1,14 +1,13 @@
 import 'package:google_generative_ai/google_generative_ai.dart';
 import '../../data/models/user_profile.dart';
 import '../services/translation_service.dart';
+import '../constants/api_keys.dart';
 import 'dart:math';
 
 class AiService {
   static final AiService instance = AiService._init();
 
   AiService._init();
-
-  static const String _apiKey = 'AIzaSyDAj8XYhPsaSLi3VB_esyxhjQkJn9aeTAs';
 
   late final GenerativeModel _model;
   bool _useAi = true;
@@ -50,7 +49,7 @@ class AiService {
     try {
       _model = GenerativeModel(
         model: 'gemini-1.5-flash',
-        apiKey: _apiKey,
+        apiKey: ApiKeys.gemini,
       );
       print('✅ Servicio de IA inicializado (Gemini 1.5 Flash - Gratis)');
     } catch (e) {

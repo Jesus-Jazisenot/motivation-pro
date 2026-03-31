@@ -9,6 +9,8 @@ import '../../core/services/translation_service.dart';
 import '../../core/services/connectivity_service.dart';
 import '../models/notification_schedule.dart';
 import '../models/reflection.dart';
+import '../models/mood_entry.dart';
+import '../models/affirmation.dart';
 
 /// Helper para gestionar la base de datos SQLite
 class DatabaseHelper {
@@ -31,7 +33,7 @@ class DatabaseHelper {
 
     return await openDatabase(
       path,
-      version: 3,
+      version: 4,
       onCreate: _createDB,
       onUpgrade: _onUpgrade,
     );
@@ -107,6 +109,27 @@ class DatabaseHelper {
       )
     ''');
 
+    // Tabla de estado de ánimo
+    await db.execute('''
+      CREATE TABLE moods (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        mood INTEGER NOT NULL,
+        note TEXT,
+        quote_id INTEGER,
+        created_at TEXT NOT NULL
+      )
+    ''');
+
+    // Tabla de afirmaciones personales
+    await db.execute('''
+      CREATE TABLE affirmations (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        text TEXT NOT NULL,
+        active INTEGER DEFAULT 1,
+        created_at TEXT NOT NULL
+      )
+    ''');
+
     print('✅ Tablas creadas correctamente - Versión $version');
   }
 
@@ -133,6 +156,26 @@ class DatabaseHelper {
           quote_id INTEGER,
           quote_text TEXT NOT NULL,
           text TEXT NOT NULL,
+          created_at TEXT NOT NULL
+        )
+      ''');
+    }
+
+    if (oldVersion < 4) {
+      await db.execute('''
+        CREATE TABLE IF NOT EXISTS moods (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          mood INTEGER NOT NULL,
+          note TEXT,
+          quote_id INTEGER,
+          created_at TEXT NOT NULL
+        )
+      ''');
+      await db.execute('''
+        CREATE TABLE IF NOT EXISTS affirmations (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          text TEXT NOT NULL,
+          active INTEGER DEFAULT 1,
           created_at TEXT NOT NULL
         )
       ''');
@@ -773,6 +816,78 @@ class DatabaseHelper {
   Future<int> deleteReflection(int id) async {
     final db = await database;
     return await db.delete('reflections', where: 'id = ?', whereArgs: [id]);
+  }
+
+  // ==========================================
+  // OPERACIONES CRUD - MOODS
+  // ==========================================
+
+  Future<int> insertMood(MoodEntry mood) async {
+    final db = await database;
+    return await db.insert('moods', mood.toMap());
+  }
+
+  Future<MoodEntry?> getMoodForDate(DateTime date) async {
+    final db = await database;
+    final dateStr =
+        '${date.year}-${date.month.toString().padLeft(2, '0')}-${date.day.toString().padLeft(2, '0')}';
+    final result = await db.rawQuery(
+      'SELECT * FROM moods WHERE created_at LIKE ? ORDER BY created_at DESC LIMIT 1',
+      ['$dateStr%'],
+    );
+    if (result.isNotEmpty) return MoodEntry.fromMap(result.first);
+    return null;
+  }
+
+  Future<List<MoodEntry>> getRecentMoods(int days) async {
+    final db = await database;
+    final result = await db.query(
+      'moods',
+      orderBy: 'created_at DESC',
+      limit: days,
+    );
+    return result.map((m) => MoodEntry.fromMap(m)).toList();
+  }
+
+  // ==========================================
+  // OPERACIONES CRUD - AFFIRMATIONS
+  // ==========================================
+
+  Future<int> insertAffirmation(Affirmation affirmation) async {
+    final db = await database;
+    return await db.insert('affirmations', affirmation.toMap());
+  }
+
+  Future<List<Affirmation>> getAllAffirmations() async {
+    final db = await database;
+    final result = await db.query('affirmations', orderBy: 'created_at DESC');
+    return result.map((m) => Affirmation.fromMap(m)).toList();
+  }
+
+  Future<List<Affirmation>> getActiveAffirmations() async {
+    final db = await database;
+    final result = await db.query(
+      'affirmations',
+      where: 'active = ?',
+      whereArgs: [1],
+      orderBy: 'created_at DESC',
+    );
+    return result.map((m) => Affirmation.fromMap(m)).toList();
+  }
+
+  Future<int> updateAffirmation(Affirmation affirmation) async {
+    final db = await database;
+    return await db.update(
+      'affirmations',
+      affirmation.toMap(),
+      where: 'id = ?',
+      whereArgs: [affirmation.id],
+    );
+  }
+
+  Future<int> deleteAffirmation(int id) async {
+    final db = await database;
+    return await db.delete('affirmations', where: 'id = ?', whereArgs: [id]);
   }
 
   /// Cargar frases iniciales si la BD está vacía

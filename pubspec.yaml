@@ -69,6 +69,9 @@ dependencies:
   android_alarm_manager_plus: ^4.0.3
   #permission_handler: ^11.3.1
 
+  # In-app review
+  in_app_review: ^2.0.9
+
 dev_dependencies:
   flutter_test:
     sdk: flutter

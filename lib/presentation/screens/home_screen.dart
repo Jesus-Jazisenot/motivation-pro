@@ -17,7 +17,9 @@ import '../../core/services/ai_service.dart';
 import '../../core/services/notification_service.dart';
 import '../widgets/streak_indicator.dart';
 import '../widgets/daily_challenge_card.dart';
+import '../widgets/mood_picker_widget.dart';
 import 'reflection_screen.dart';
+import 'package:in_app_review/in_app_review.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -243,6 +245,8 @@ class _HomeScreenState extends State<HomeScreen> {
         await StatsService.instance.addXP(10);
         await StatsService.instance.updateUserStreak();
 
+        await _checkAndRequestReview();
+
         final newProfile = await db.getUserProfile();
         if (newProfile != null) {
           final newLevel = newProfile.level;
@@ -297,6 +301,25 @@ class _HomeScreenState extends State<HomeScreen> {
           _isLoading = false;
         });
       }
+    }
+  }
+
+  Future<void> _checkAndRequestReview() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final alreadyRequested = prefs.getBool('review_requested') ?? false;
+      if (alreadyRequested) return;
+
+      final streak = _userProfile?.currentStreak ?? 0;
+      if (streak < 3) return;
+
+      final inAppReview = InAppReview.instance;
+      if (await inAppReview.isAvailable()) {
+        await inAppReview.requestReview();
+        await prefs.setBool('review_requested', true);
+      }
+    } catch (e) {
+      print('Review request error: $e');
     }
   }
 
@@ -773,6 +796,11 @@ class _HomeScreenState extends State<HomeScreen> {
                           level: _userProfile!.level,
                         ),
                       ),
+
+                    const SizedBox(height: 8),
+
+                    // Estado de ánimo diario
+                    const MoodPickerWidget(),
 
                     const SizedBox(height: 8),
 
